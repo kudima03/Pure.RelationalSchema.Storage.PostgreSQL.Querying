@@ -7,6 +7,7 @@ using Pure.RelationalSchema.Abstractions.Schema;
 using Pure.RelationalSchema.Abstractions.Table;
 using Pure.RelationalSchema.HashCodes;
 using Pure.RelationalSchema.Storage.Abstractions;
+using Pure.RelationalSchema.Storage.PostgreSQL.Abstractions;
 
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying;
 
