@@ -1,4 +1,4 @@
-# Pure.Template
+# Pure.RelationalSchema.Storage.PostgreSQL.Querying
 
 Project template for new **Pure** ecosystem NuGet libraries.
 
