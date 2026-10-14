@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <EnablePackageValidation>true</EnablePackageValidation>
+    <IsAotCompatible>false</IsAotCompatible>
+  </PropertyGroup>
+  <PropertyGroup>
+    <PackageId>Pure.RelationalSchema.Storage.PostgreSQL.Querying</PackageId>
+    <RootNamespace>Pure.RelationalSchema.Storage.PostgreSQL.Querying</RootNamespace>
+    <AssemblyName>Pure.RelationalSchema.Storage.PostgreSQL.Querying</AssemblyName>
+    <Authors>Dmitry Kurochkin</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageProjectUrl>https://github.com/kudima03/Pure.RelationalSchema.Storage.PostgreSQL.Querying</PackageProjectUrl>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Pure.Collections.Generic" Version="0.1.0-preview.3.0.0" />
+    <PackageReference Include="Pure.Primitives" Version="3.6.5" />
+    <PackageReference Include="Pure.Primitives.Abstractions" Version="4.3.0" />
+    <PackageReference Include="Pure.Primitives.Choices" Version="1.2.2" />
+    <PackageReference Include="Pure.Primitives.String.Operations" Version="1.5.1" />
+    <PackageReference Include="Pure.RelationalSchema.HashCodes" Version="3.3.0" />
+    <PackageReference Include="Pure.RelationalSchema.Storage" Version="0.1.0-preview.8.0.0" />
+    <PackageReference Include="Pure.RelationalSchema.Storage.PostgreSQL.Abstractions" Version="0.1.0-preview.0.1.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="/" />
+  </ItemGroup>
+</Project>
