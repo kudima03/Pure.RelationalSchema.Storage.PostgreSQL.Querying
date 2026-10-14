@@ -32,7 +32,7 @@ internal sealed record RowsAsyncEnumerable : IAsyncEnumerable<IRow>
         CancellationToken cancellationToken = default
     )
     {
-        await using DbConnection conn = (DbConnection)_connection;
+        DbConnection conn = (DbConnection)_connection;
         await using DbCommand cmd = conn.CreateCommand();
         cmd.CommandText = new SelectAllStatement(_table, _schemaName).TextValue;
 
