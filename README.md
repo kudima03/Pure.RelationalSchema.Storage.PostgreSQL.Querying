@@ -12,6 +12,7 @@ PostgreSQL row querying for the **Pure** relational schema ecosystem — `IQuery
 `Pure.RelationalSchema.Storage.PostgreSQL.Querying` reads rows from a live PostgreSQL database through the storage abstractions defined in `Pure.RelationalSchema.Storage`:
 
 - **Row access** — `PostgreSqlStoredTableDataSet` exposes the rows of a table as both `IQueryable<IRow>` and `IAsyncEnumerable<IRow>`, backed by a `SELECT` of all columns.
+- **Query translation** — LINQ composed over the stored tables of one schema runs as one PostgreSQL `SELECT`, translated by [`Linq.Expressions.Translation.PostgreSql`](https://www.nuget.org/packages/Linq.Expressions.Translation.PostgreSql). A query across schemas is split: each part that reads one schema runs in SQL, and the parts are combined in memory.
 - **Schema-wide access** — `PostgreSqlStoredSchemaDataSet` maps every `ITable` of an `ISchema` to its `PostgreSqlStoredTableDataSet`. It implements `IPostgreSqlStoredSchemaDataSet`, which is defined in the separate `Pure.RelationalSchema.Storage.PostgreSQL.Abstractions` package.
 
 This package covers reads only. Creating the tables and inserting rows is handled by the related packages listed below.
@@ -25,12 +26,56 @@ The tables must already exist with the hash-based names produced by `Pure.Relati
 | `PostgreSqlStoredSchemaDataSet` | record | Maps each `ITable` in an `ISchema` to a `PostgreSqlStoredTableDataSet`; implements `IPostgreSqlStoredSchemaDataSet` (from `Pure.RelationalSchema.Storage.PostgreSQL.Abstractions`) |
 | `PostgreSqlStoredTableDataSet` | record | `IStoredTableDataSet` backed by a PostgreSQL table; supports sync and async enumeration. Public members: `SchemaName`, `Connection`, `TableSchema` |
 
-`IPostgreSqlStoredSchemaDataSet` (an `IStoredSchemaDataSet` with an `IDbConnection Connection` property) lives in `Pure.RelationalSchema.Storage.PostgreSQL.Abstractions`, so other packages can depend on it without depending on this one. All SQL statement builders and the row enumerables are internal.
+`IPostgreSqlStoredSchemaDataSet` (an `IStoredSchemaDataSet` with an `IDbConnection Connection` property) lives in `Pure.RelationalSchema.Storage.PostgreSQL.Abstractions`, so other packages can depend on it without depending on this one. All SQL statement builders, the row enumerables and the query provider are internal.
+
+## Query translation
+
+The `Provider` of a `PostgreSqlStoredTableDataSet` translates the LINQ composed over it. When a query is enumerated (or a terminal operator such as `Count` or `First` runs), the provider walks its expression tree from the top:
+
+- The largest operator whose sources are all stored tables of **one schema** — the same `IDbConnection` instance and the same schema name — is translated into one `SELECT` and executed; its result replaces the operator in the tree.
+- An operator that reads several schemas or connections, or that cannot be translated, stays in the tree, and the provider tries its operands instead. What is left runs in memory with LINQ to Objects over those results, and a table no translated part reads is read with a `SELECT` of all its columns.
+
+So a join of two tables of one schema is one `SELECT ... JOIN ...`, while a join of tables of two schemas is two filtered `SELECT`s joined in memory. A subquery that depends on a row of another schema (a correlated subquery) runs in memory per row.
+
+Rows are read as cells of text, so the provider translates cell reads of the form `row.Cells[column].Value.TextValue`, where `column` is a constant or captured `IColumn` of a queried table, into the SQL text of the column, matching what enumeration returns:
+
+| Column type | Text in SQL |
+|---|---|
+| `string` | the value |
+| `int`, `ushort`, `long`, `uint`, `ulong`, `uuid` | `CAST(... AS text)` |
+| `bool` | `True` / `False` |
+
+Cells of the other column types (`date`, `time`, `datetime`, `double`, `float`, `determined_hash`) are read in memory, as is any other use of a row (`row.Cells.Count`, a cell's `IString` itself, ...).
+
+A translated query returns rows of one table (through `Where`, `OrderBy`, `Skip`, `Take`, `Distinct`, set operations of the same table and the element operators), scalars, anonymous types and value tuples of scalars; any other result shape runs in memory over translated operands. Results keep the semantics of enumeration, except that SQL compares and orders text by the database collation.
+
+```csharp
+IQueryable<IRow> customers = shop[customersTable];
+IQueryable<IRow> orders = shop[ordersTable];
+
+// One statement: SELECT ... FROM ... AS t0 INNER JOIN ... AS t1 ON ... WHERE ...
+var totals = customers
+    .Where(c => c.Cells[activeColumn].Value.TextValue == "True")
+    .Join(
+        orders,
+        c => c.Cells[idColumn].Value.TextValue,
+        o => o.Cells[customerIdColumn].Value.TextValue,
+        (c, o) => new
+        {
+            Name = c.Cells[nameColumn].Value.TextValue,
+            Total = o.Cells[totalColumn].Value.TextValue,
+        }
+    )
+    .ToArray();
+```
+
+`IStoredTableDataSet` is both `IQueryable<IRow>` and `IAsyncEnumerable<IRow>`, so with `System.Linq.Async` (or .NET 10's `System.Linq.AsyncEnumerable`) in scope, compose over it as `IQueryable<IRow>` to pick the translated operators.
 
 ## Dependencies
 
 - [`Pure.RelationalSchema.Storage`](https://github.com/kudima03/Pure.RelationalSchema.Storage/tree/0.1.0-preview.8.0.0) — storage abstractions (`IStoredSchemaDataSet`, `IStoredTableDataSet`, `IRow`) that this package implements
 - [`Pure.RelationalSchema.Storage.PostgreSQL.Abstractions`](https://github.com/kudima03/Pure.RelationalSchema.Storage.PostgreSQL.Abstractions/tree/0.1.0-preview.0.1.0) — `IPostgreSqlStoredSchemaDataSet`, the interface implemented by `PostgreSqlStoredSchemaDataSet`
+- [`Linq.Expressions.Translation.PostgreSql`](https://github.com/kudima03/Linq.Expressions.Translation.PostgreSql/tree/0.1.0-preview.0.1.0) — translates LINQ expression trees into PostgreSQL `SELECT` statements
 - [`Pure.RelationalSchema.HashCodes`](https://github.com/kudima03/Pure.RelationalSchema.HashCodes/tree/3.3.0) — hash codes used to derive PostgreSQL object names
 - [`Pure.Primitives.Abstractions`](https://github.com/kudima03/Pure.Primitives.Abstractions/tree/4.3.0) — base interfaces for primitive types (`IString`, etc.)
 - [`Pure.Primitives`](https://github.com/kudima03/Pure.Primitives/tree/3.6.5) — concrete primitive type implementations
