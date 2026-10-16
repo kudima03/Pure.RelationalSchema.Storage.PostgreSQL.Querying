@@ -12,8 +12,6 @@ namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying;
 
 public sealed record PostgreSqlStoredTableDataSet : IStoredTableDataSet
 {
-    private readonly IQueryable<IRow> _rows;
-
     private readonly IAsyncEnumerable<IRow> _rowsAsync;
 
     public PostgreSqlStoredTableDataSet(
@@ -30,7 +28,7 @@ public sealed record PostgreSqlStoredTableDataSet : IStoredTableDataSet
     )
         : this(
             tableSchema,
-            new RowsEnumerable(connection, schemaName, tableSchema).AsQueryable(),
+            new RowsEnumerable(connection, schemaName, tableSchema),
             new RowsAsyncEnumerable(connection, schemaName, tableSchema),
             connection,
             schemaName
@@ -39,13 +37,13 @@ public sealed record PostgreSqlStoredTableDataSet : IStoredTableDataSet
 
     private PostgreSqlStoredTableDataSet(
         ITable tableSchema,
-        IQueryable<IRow> rows,
+        IEnumerable<IRow> rows,
         IAsyncEnumerable<IRow> rowsAsync,
         IDbConnection connection,
         IString schemaName
     )
     {
-        _rows = rows;
+        Rows = rows;
         _rowsAsync = rowsAsync;
         TableSchema = tableSchema;
         Connection = connection;
@@ -54,19 +52,21 @@ public sealed record PostgreSqlStoredTableDataSet : IStoredTableDataSet
 
     public IString SchemaName { get; }
 
+    internal IEnumerable<IRow> Rows { get; }
+
     public IDbConnection Connection { get; }
 
     public ITable TableSchema { get; }
 
-    public Type ElementType => _rows.ElementType;
+    public Type ElementType => typeof(IRow);
 
-    public Expression Expression => _rows.Expression;
+    public Expression Expression => Expression.Constant(this, typeof(IQueryable<IRow>));
 
-    public IQueryProvider Provider => _rows.Provider;
+    public IQueryProvider Provider => new PostgreSqlQueryProvider();
 
     public IEnumerator<IRow> GetEnumerator()
     {
-        return _rows.GetEnumerator();
+        return Rows.GetEnumerator();
     }
 
     IEnumerator IEnumerable.GetEnumerator()
@@ -79,5 +79,10 @@ public sealed record PostgreSqlStoredTableDataSet : IStoredTableDataSet
     )
     {
         return _rowsAsync.GetAsyncEnumerator(cancellationToken);
+    }
+
+    public override string ToString()
+    {
+        throw new NotSupportedException();
     }
 }
