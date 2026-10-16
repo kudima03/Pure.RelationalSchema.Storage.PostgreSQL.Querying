@@ -587,7 +587,7 @@ public sealed record QueryTranslationTests : IClassFixture<QueryingFixture>, IDi
     }
 
     [Fact]
-    public void ReadsInMemoryWhenResultsAreNotReadByPosition()
+    public void TranslatesStructInitializersInSql()
     {
         string[] customers =
         [
@@ -605,7 +605,7 @@ public sealed record QueryTranslationTests : IClassFixture<QueryingFixture>, IDi
         ];
 
         Assert.Equal(["Ann:True", "Bob:False", "Cid:True"], customers);
-        Assert.Equal(2, _connection.Statements.Count);
+        _ = Assert.Single(_connection.Statements);
     }
 
     public void Dispose()
