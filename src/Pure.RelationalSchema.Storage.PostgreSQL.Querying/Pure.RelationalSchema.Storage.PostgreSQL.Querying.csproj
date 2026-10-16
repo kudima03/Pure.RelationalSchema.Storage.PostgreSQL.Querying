@@ -17,7 +17,7 @@
     <PackageProjectUrl>https://github.com/kudima03/Pure.RelationalSchema.Storage.PostgreSQL.Querying</PackageProjectUrl>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Linq.Expressions.Translation.PostgreSql" Version="0.1.0-preview.0.1.0" />
+    <PackageReference Include="Linq.Expressions.Translation.PostgreSql" Version="0.1.0-preview.0.2.0" />
     <PackageReference Include="Pure.Collections.Generic" Version="0.1.0-preview.3.0.0" />
     <PackageReference Include="Pure.Primitives" Version="3.6.5" />
     <PackageReference Include="Pure.Primitives.Abstractions" Version="4.3.0" />
