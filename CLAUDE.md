@@ -38,7 +38,7 @@ This is the **querying (read)** part of the PostgreSQL storage implementation fo
 
 **Multi-targeting:** net8.0, net9.0, net10.0. `IsAotCompatible` is explicitly `false` (the entity types are emitted at runtime and in-memory execution uses `EnumerableQuery`).
 
-**Package validation:** `EnablePackageValidation = true`, with `PackageValidationBaselineVersion` currently `0.1.0-preview.0.3.0`. Breaking API changes against the baseline fail the build.
+**Package validation:** `EnablePackageValidation = true`, with `PackageValidationBaselineVersion` currently `0.1.0-preview.0.4.0`. Breaking API changes against the baseline fail the build.
 
 **Publishing:** triggered by pushing a semver tag matching `*.*.*`. The tag name becomes the `PackageVersion`. Packages are published to both GitHub Packages and NuGet.org.
 
