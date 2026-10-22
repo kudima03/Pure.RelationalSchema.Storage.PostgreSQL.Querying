@@ -23,7 +23,7 @@
     <PackageReference Include="Pure.Primitives" Version="3.7.0" />
     <PackageReference Include="Pure.Primitives.Abstractions" Version="4.3.0" />
     <PackageReference Include="Pure.Primitives.Choices" Version="1.3.0" />
-    <PackageReference Include="Pure.Primitives.String.Operations" Version="1.5.1" />
+    <PackageReference Include="Pure.Primitives.String.Operations" Version="1.6.0" />
     <PackageReference Include="Pure.RelationalSchema.HashCodes" Version="3.3.0" />
     <PackageReference Include="Pure.RelationalSchema.Storage" Version="0.1.0-preview.8.0.0" />
     <PackageReference Include="Pure.RelationalSchema.Storage.PostgreSQL.Abstractions" Version="0.1.0-preview.0.1.0" />
