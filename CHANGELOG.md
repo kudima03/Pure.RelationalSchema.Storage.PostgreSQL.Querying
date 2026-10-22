@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-preview.0.4.0] - 2026-10-22
+
+### Changed
+
+- Updated the `Pure.Primitives.Choices` dependency from 1.2.2 to 1.3.0.
+- Updated the `Pure.Primitives.String.Operations` dependency from 1.5.1 to 1.6.0.
+
 ## [0.1.0-preview.0.3.0] - 2026-10-22
 
 ### Changed
