@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-preview.0.3.0] - 2026-10-22
+
+### Changed
+
+- Updated the `Pure.Primitives` dependency from 3.6.5 to 3.7.0.
+
 ## [0.1.0-preview.0.2.0] - 2026-10-16
 
 ### Added
