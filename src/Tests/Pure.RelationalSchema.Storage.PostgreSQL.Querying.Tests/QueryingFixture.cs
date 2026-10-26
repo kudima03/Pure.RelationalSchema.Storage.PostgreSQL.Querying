@@ -43,6 +43,8 @@ public sealed record QueryingFixture : IDisposable
         OrderShelf = new Column(new String("Shelf"), new UIntColumnType());
         NoteCustomer = new Column(new String("CustomerId"), new LongColumnType());
         NoteText = new Column(new String("Text"), new StringColumnType());
+        WordId = new Column(new String("Id"), new LongColumnType());
+        WordText = new Column(new String("Text"), new StringColumnType());
 
         Customers = new Table(
             new String("Customers"),
@@ -55,8 +57,9 @@ public sealed record QueryingFixture : IDisposable
             []
         );
         Notes = new Table(new String("Notes"), [NoteCustomer, NoteText], []);
+        Words = new Table(new String("Words"), [WordId, WordText], []);
 
-        Shop = new Schema(new String("Shop"), [Customers, Orders], []);
+        Shop = new Schema(new String("Shop"), [Customers, Orders, Words], []);
         Crm = new Schema(new String("Crm"), [Notes], []);
 
         TestSchema.Create(Connection, Shop);
@@ -78,6 +81,20 @@ public sealed record QueryingFixture : IDisposable
             ["1", "250", "'00000000-0000-0000-0000-00000000000b'", "7", "2", "20"],
             ["3", "40", "'00000000-0000-0000-0000-00000000000c'", "1234", "1", "300"]
         );
+        TestSchema.Insert(
+            Connection,
+            Shop,
+            Words,
+            ["1", "'\U0001F600x'"],
+            ["2", "'a_b'"],
+            ["3", "'axb'"],
+            ["4", "'a\\b'"],
+            ["5", "'50%'"],
+            ["6", "'  pad  '"],
+            ["7", "''"],
+            ["8", "E'\\u00a0nbsp\\u00a0'"],
+            ["9", "'MiXeD'"]
+        );
         TestSchema.Insert(Connection, Crm, Notes, ["1", "'vip'"], ["3", "'new'"]);
 
         TestSchema.CreateTable(Connection, "", Notes);
@@ -95,6 +112,8 @@ public sealed record QueryingFixture : IDisposable
     public ITable Orders { get; }
 
     public ITable Notes { get; }
+
+    public ITable Words { get; }
 
     public IColumn CustomerId { get; }
 
@@ -119,6 +138,10 @@ public sealed record QueryingFixture : IDisposable
     public IColumn NoteCustomer { get; }
 
     public IColumn NoteText { get; }
+
+    public IColumn WordId { get; }
+
+    public IColumn WordText { get; }
 
     public void Dispose()
     {
