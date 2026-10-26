@@ -126,7 +126,7 @@ internal sealed record QueryElement
         return bindings;
     }
 
-    private static Expression? Of(Expression query)
+    private static Expression? Of(Expression? query)
     {
         return Resolved(query) switch
         {
