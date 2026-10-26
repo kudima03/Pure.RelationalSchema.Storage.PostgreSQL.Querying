@@ -8,9 +8,9 @@ using Pure.RelationalSchema.HashCodes;
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying;
 
 /// <summary>
-/// A query operator whose tree reads stored tables of one schema only. When the
-/// translator turns it into SQL, it runs as one statement and its result replaces
-/// the operator in the tree.
+/// A query operator whose tree must read stored tables of one schema only. The
+/// translator turns it into SQL, which runs as one statement, and its result
+/// replaces the operator in the tree.
 /// </summary>
 internal sealed record SchemaQuery
 {
@@ -63,40 +63,48 @@ internal sealed record SchemaQuery
         IsSequence ? _call.Type.GetGenericArguments()[0] : _call.Type;
 
     /// <summary>
-    /// The result of the operator, or <see langword="null"/> when it does not read
-    /// one schema only or cannot be translated, as when it depends on a parameter
-    /// of an enclosing lambda.
+    /// The result of the operator.
     /// </summary>
-    public Expression? Result()
+    /// <exception cref="NotSupportedException">
+    /// The operator does not read stored tables of one schema only, its result
+    /// cannot be read, or the translator cannot turn it into SQL.
+    /// </exception>
+    public Expression Result()
     {
         IReadOnlyList<IQueryable> roots = new QueryRoots().In(_call);
         PostgreSqlStoredTableDataSet[] tables =
         [
             .. roots.OfType<PostgreSqlStoredTableDataSet>(),
         ];
+        if (tables.Length == 0 || tables.Length != roots.Count)
+        {
+            throw new NotSupportedException(
+                $"The query operator {_call.Method.Name} reads sources other than "
+                    + "stored tables, so it cannot be translated to SQL."
+            );
+        }
+        if (!tables.All(x => IsSameSchema(tables[0], x)))
+        {
+            throw new NotSupportedException(
+                $"The query operator {_call.Method.Name} reads tables of more than "
+                    + "one schema or connection, so it cannot be translated to SQL."
+            );
+        }
         ResultReader reader = new(ElementType, Table(_call));
-        if (
-            tables.Length == 0
-            || tables.Length != roots.Count
-            || !tables.All(x => IsSameSchema(tables[0], x))
-            || !reader.IsSupported
-        )
+        if (!reader.IsSupported)
         {
-            return null;
+            throw new NotSupportedException(
+                $"The query operator {_call.Method.Name} returns {ElementType}, "
+                    + "which cannot be read from a SQL result."
+            );
         }
-        string? sql = Sql(tables);
-        if (sql is null)
-        {
-            return null;
-        }
-        IReadOnlyList<object?>? values = Values(tables[0].Connection, sql, reader);
-        return values is null ? null
-            : IsSequence ? Expression.Constant(Typed(values).AsQueryable(), _call.Type)
+        IReadOnlyList<object?> values = Values(tables[0].Connection, Sql(tables), reader);
+        return IsSequence ? Expression.Constant(Typed(values).AsQueryable(), _call.Type)
             : Elements.Contains(_call.Method.Name) ? Element(Typed(values))
             : Aggregate(values[0]);
     }
 
-    private string? Sql(IEnumerable<PostgreSqlStoredTableDataSet> tables)
+    private string Sql(IEnumerable<PostgreSqlStoredTableDataSet> tables)
     {
         try
         {
@@ -113,11 +121,14 @@ internal sealed record SchemaQuery
                         or ArgumentException
             )
         {
-            return null;
+            throw new NotSupportedException(
+                $"The query operator {_call.Method.Name} cannot be translated to SQL.",
+                exception
+            );
         }
     }
 
-    private static IReadOnlyList<object?>? Values(
+    private IReadOnlyList<object?> Values(
         IDbConnection connection,
         string sql,
         ResultReader reader
@@ -128,7 +139,10 @@ internal sealed record SchemaQuery
         using IDataReader result = command.ExecuteReader();
         if (result.FieldCount != reader.Width)
         {
-            return null;
+            throw new NotSupportedException(
+                $"The SQL of the query operator {_call.Method.Name} returns "
+                    + $"{result.FieldCount} columns where {reader.Width} are expected."
+            );
         }
         Collection<object?> values = [];
         while (result.Read())

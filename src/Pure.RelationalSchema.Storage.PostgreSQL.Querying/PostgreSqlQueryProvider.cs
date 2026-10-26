@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using Pure.RelationalSchema.Storage.Abstractions;
 
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying;
 
@@ -28,18 +29,37 @@ internal sealed record PostgreSqlQueryProvider : IQueryProvider
 
     public object? Execute(Expression expression)
     {
-        return InMemory.Execute(Split(expression));
+        return InMemory.Execute(Translated(expression));
     }
 
     public TResult Execute<TResult>(Expression expression)
     {
-        return InMemory.Execute<TResult>(Split(expression));
+        return InMemory.Execute<TResult>(Translated(expression));
     }
 
-    private static Expression Split(Expression expression)
+    /// <summary>
+    /// The tree with its result read in SQL, which in-memory execution then returns.
+    /// </summary>
+    /// <exception cref="NotSupportedException">
+    /// The query cannot be translated to one SQL statement.
+    /// </exception>
+    private static Expression Translated(Expression expression)
     {
-        return new InMemoryTables().Visit(
-            new SchemaSubqueries().Visit(new CapturedQueries().Visit(expression))
-        )!;
+        return new CapturedQueries().Visit(expression) switch
+        {
+            ConstantExpression { Value: PostgreSqlStoredTableDataSet table } =>
+                Expression.Constant(
+                    new EnumerableQuery<IRow>(table.Rows),
+                    expression.Type
+                ),
+            MethodCallExpression call
+                when call.Method.DeclaringType == typeof(Queryable) => new SchemaQuery(
+                call
+            ).Result(),
+            _ => throw new NotSupportedException(
+                "The query is not a query operator over stored tables, so it cannot "
+                    + "be translated to SQL."
+            ),
+        };
     }
 }

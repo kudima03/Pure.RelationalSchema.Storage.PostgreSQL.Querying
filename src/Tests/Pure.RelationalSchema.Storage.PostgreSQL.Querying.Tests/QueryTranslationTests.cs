@@ -4,10 +4,16 @@ using Pure.Primitives.String;
 using Pure.RelationalSchema.Abstractions.Column;
 using Pure.RelationalSchema.Storage.Abstractions;
 
+// The tests of queries that ran in memory are skipped until they are translated.
+#pragma warning disable xUnit1004
+
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying.Tests;
 
 public sealed record QueryTranslationTests : IClassFixture<QueryingFixture>, IDisposable
 {
+    private const string Untranslatable =
+        "Queries that cannot be translated to SQL throw instead of running in memory.";
+
     private readonly QueryingFixture _fixture;
 
     private readonly RecordingConnection _connection;
@@ -161,7 +167,7 @@ public sealed record QueryTranslationTests : IClassFixture<QueryingFixture>, IDi
         Assert.All(_connection.Statements, x => Assert.Contains(" LIMIT ", x));
     }
 
-    [Fact]
+    [Fact(Skip = Untranslatable)]
     public void ReturnsDefaultsWhenNoElementIsFound()
     {
         IQueryable<IRow> none = Customers.Where(x =>
@@ -289,7 +295,7 @@ public sealed record QueryTranslationTests : IClassFixture<QueryingFixture>, IDi
         Assert.Contains(" WHERE ", Assert.Single(_connection.Statements));
     }
 
-    [Fact]
+    [Fact(Skip = Untranslatable)]
     public void ReadsQueriesHeldByRowsInMemory()
     {
         IQueryable<IRow> notes = Notes;
@@ -358,7 +364,7 @@ public sealed record QueryTranslationTests : IClassFixture<QueryingFixture>, IDi
         _ = Assert.Single(_connection.Statements);
     }
 
-    [Fact]
+    [Fact(Skip = Untranslatable)]
     public void JoinsTablesOfDifferentSchemasInMemory()
     {
         string[] notes =
@@ -384,7 +390,7 @@ public sealed record QueryTranslationTests : IClassFixture<QueryingFixture>, IDi
         Assert.All(_connection.Statements, x => Assert.Contains(" WHERE ", x));
     }
 
-    [Fact]
+    [Fact(Skip = Untranslatable)]
     public void JoinsTablesOfDifferentConnectionsInMemory()
     {
         RecordingConnection other = new(_fixture.Connection);
@@ -403,7 +409,7 @@ public sealed record QueryTranslationTests : IClassFixture<QueryingFixture>, IDi
         _ = Assert.Single(other.Statements);
     }
 
-    [Fact]
+    [Fact(Skip = Untranslatable)]
     public void FiltersByCorrelatedQueryOfAnotherSchemaInMemory()
     {
         IQueryable<IRow> notes = Notes;
@@ -464,7 +470,7 @@ public sealed record QueryTranslationTests : IClassFixture<QueryingFixture>, IDi
         Assert.Contains(" UNION ", Assert.Single(_connection.Statements));
     }
 
-    [Fact]
+    [Fact(Skip = Untranslatable)]
     public void ConcatenatesRowsOfDifferentTablesInMemory()
     {
         IRow[] rows = [.. Customers.Concat(Orders)];
@@ -473,7 +479,7 @@ public sealed record QueryTranslationTests : IClassFixture<QueryingFixture>, IDi
         Assert.Equal(2, _connection.Statements.Count);
     }
 
-    [Fact]
+    [Fact(Skip = Untranslatable)]
     public void ReadsCellsOfUnsupportedColumnTypesInMemory()
     {
         IRow row = Assert.Single(
@@ -487,7 +493,7 @@ public sealed record QueryTranslationTests : IClassFixture<QueryingFixture>, IDi
         Assert.DoesNotContain(" WHERE ", Assert.Single(_connection.Statements));
     }
 
-    [Fact]
+    [Fact(Skip = Untranslatable)]
     public void RunsUntranslatableOperatorsInMemoryOverTranslatedSources()
     {
         string[] names =
@@ -502,7 +508,7 @@ public sealed record QueryTranslationTests : IClassFixture<QueryingFixture>, IDi
         Assert.Contains(" WHERE ", Assert.Single(_connection.Statements));
     }
 
-    [Fact]
+    [Fact(Skip = Untranslatable)]
     public void ReadsOtherRowMembersInMemory()
     {
         Assert.Equal(3, Customers.Count(x => x.Cells.Count == 4));
@@ -524,7 +530,7 @@ public sealed record QueryTranslationTests : IClassFixture<QueryingFixture>, IDi
         Assert.DoesNotContain(_connection.Statements, x => x.Contains("COUNT("));
     }
 
-    [Fact]
+    [Fact(Skip = Untranslatable)]
     public void ExecutesThroughTheProvider()
     {
         IQueryable rows = Customers.Provider.CreateQuery(Customers.Expression);
@@ -557,7 +563,7 @@ public sealed record QueryTranslationTests : IClassFixture<QueryingFixture>, IDi
         _ = Assert.Throws<NotSupportedException>(Customers.Expression.ToString);
     }
 
-    [Fact]
+    [Fact(Skip = Untranslatable)]
     public void JoinsInMemoryWhenResultsHoldRows()
     {
         string[] totals =
@@ -606,6 +612,147 @@ public sealed record QueryTranslationTests : IClassFixture<QueryingFixture>, IDi
 
         Assert.Equal(["Ann:True", "Bob:False", "Cid:True"], customers);
         _ = Assert.Single(_connection.Statements);
+    }
+
+    [Fact]
+    public void ThrowsWhenAnOperatorCannotBeTranslated()
+    {
+        NotSupportedException exception = Assert.Throws<NotSupportedException>(() =>
+            Customers.Select(x => Shout(x.Cells[_fixture.CustomerName].Value.TextValue))
+                .ToArray()
+        );
+
+        Assert.Equal(
+            "The query operator Select cannot be translated to SQL.",
+            exception.Message
+        );
+        _ = Assert.IsType<NotSupportedException>(exception.InnerException);
+        Assert.Empty(_connection.Statements);
+    }
+
+    [Fact]
+    public void ThrowsWhenAQueryReadsTablesOfDifferentSchemas()
+    {
+        NotSupportedException exception = Assert.Throws<NotSupportedException>(() =>
+            Customers.Concat(Notes).Count()
+        );
+
+        Assert.Equal(
+            "The query operator Count reads tables of more than one schema or "
+                + "connection, so it cannot be translated to SQL.",
+            exception.Message
+        );
+        Assert.Empty(_connection.Statements);
+    }
+
+    [Fact]
+    public void ThrowsWhenAQueryReadsTablesOfDifferentConnections()
+    {
+        using RecordingConnection other = new(_fixture.Connection);
+        IQueryable<IRow> customers = new PostgreSqlStoredSchemaDataSet(
+            _fixture.Shop,
+            other
+        )[_fixture.Customers];
+
+        _ = Assert.Throws<NotSupportedException>(() =>
+            Customers.Concat(customers).Count()
+        );
+        Assert.Empty(_connection.Statements);
+        Assert.Empty(other.Statements);
+    }
+
+    [Fact]
+    public void ThrowsWhenAQueryReadsSourcesOtherThanStoredTables()
+    {
+        IQueryable<IRow> rows = Array.Empty<IRow>().AsQueryable();
+
+        NotSupportedException exception = Assert.Throws<NotSupportedException>(() =>
+            Customers.Concat(rows).Count()
+        );
+
+        Assert.Equal(
+            "The query operator Count reads sources other than stored tables, so it "
+                + "cannot be translated to SQL.",
+            exception.Message
+        );
+        Assert.Empty(_connection.Statements);
+    }
+
+    [Fact]
+    public void ThrowsWhenAResultCannotBeRead()
+    {
+        NotSupportedException exception = Assert.Throws<NotSupportedException>(() =>
+            Customers.Select(x => new { Customer = x }).ToArray()
+        );
+
+        Assert.StartsWith(
+            "The query operator Select returns ",
+            exception.Message,
+            StringComparison.Ordinal
+        );
+        Assert.EndsWith(
+            ", which cannot be read from a SQL result.",
+            exception.Message,
+            StringComparison.Ordinal
+        );
+        Assert.Empty(_connection.Statements);
+    }
+
+    [Fact]
+    public void ThrowsWhenRowsHoldQueriesOfAnotherSchema()
+    {
+        IQueryable<IRow> notes = Notes;
+
+        _ = Assert.Throws<NotSupportedException>(() =>
+            Customers
+                .Select(customer => new { Customer = customer, Notes = notes })
+                .SelectMany(
+                    x =>
+                        x.Notes.Where(note =>
+                            note.Cells[_fixture.NoteCustomer].Value.TextValue
+                            == x.Customer.Cells[_fixture.CustomerId].Value.TextValue
+                        ),
+                    (x, note) => note.Cells[_fixture.NoteText].Value.TextValue
+                )
+                .ToArray()
+        );
+        Assert.Empty(_connection.Statements);
+    }
+
+    [Fact]
+    public void ThrowsWhenAnExpressionIsNotAQueryOperator()
+    {
+        Assert.Equal(
+            "The query is not a query operator over stored tables, so it cannot be "
+                + "translated to SQL.",
+            Assert.Throws<NotSupportedException>(() =>
+                Customers.Provider.Execute(Expression.Constant(3))
+            ).Message
+        );
+    }
+
+    [Fact]
+    public void ReadsTablesThroughTheProvider()
+    {
+        Assert.Equal(
+            3,
+            Customers.Provider.Execute<IEnumerable<IRow>>(Customers.Expression).Count()
+        );
+        Assert.Equal(
+            3,
+            Customers.Provider.Execute(
+                Expression.Call(
+                    typeof(Queryable),
+                    nameof(Queryable.Count),
+                    [typeof(IRow)],
+                    Customers.Expression
+                )
+            )
+        );
+        IQueryable rows = Customers.Provider.CreateQuery(Customers.Expression);
+
+        Assert.Equal(typeof(IRow), rows.ElementType);
+        Assert.Equal(3, Count(rows));
     }
 
     public void Dispose()
