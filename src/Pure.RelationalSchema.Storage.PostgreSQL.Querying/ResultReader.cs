@@ -1,6 +1,6 @@
 using System.Data;
+using System.Linq.Expressions;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using Pure.RelationalSchema.Abstractions.Table;
 using Pure.RelationalSchema.Storage.Abstractions;
 
@@ -9,7 +9,9 @@ namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying;
 /// <summary>
 /// Reads an element of a translated query from the columns of its result, in the
 /// order the translator projects them: the columns of a row's table, one column for
-/// a scalar, and the members of an anonymous type or value tuple in turn.
+/// a scalar, and the arguments of a constructed object (an anonymous type, a value
+/// tuple, ...) in turn. The element expression (see <see cref="QueryElement"/>)
+/// names the table of each row and the constructor of each object.
 /// </summary>
 internal sealed record ResultReader : IResultReader
 {
@@ -28,9 +30,9 @@ internal sealed record ResultReader : IResultReader
 
     private readonly IResultReader? _reader;
 
-    public ResultReader(Type type, ITable? table)
+    public ResultReader(Type type, Expression? element)
     {
-        _reader = Reader(type, table);
+        _reader = Reader(type, element);
     }
 
     public bool IsSupported => _reader is not null;
@@ -42,34 +44,47 @@ internal sealed record ResultReader : IResultReader
         return _reader!.Read(record, offset);
     }
 
-    private static IResultReader? Reader(Type type, ITable? table)
+    private static IResultReader? Reader(Type type, Expression? element)
     {
         if (type == typeof(IRow))
         {
-            return table is null ? null : new RowReader(table);
+            return QueryElement.TableOf(element) is ITable table
+                ? new RowReader(table)
+                : null;
         }
         if (Scalars.Contains(Nullable.GetUnderlyingType(type) ?? type))
         {
             return new ScalarReader(type);
         }
-        if (!type.IsDefined(typeof(CompilerGeneratedAttribute)) && !IsValueTuple(type))
+        if (
+            Construction(element)
+            is not { Constructor: ConstructorInfo constructor } creation
+        )
         {
             return null;
         }
-        ConstructorInfo constructor = type.GetConstructors().Single();
-        IResultReader?[] arguments =
+        ParameterInfo[] parameters = constructor.GetParameters();
+        IResultReader?[] readers =
         [
-            .. constructor.GetParameters().Select(x => Reader(x.ParameterType, null)),
+            .. creation.Arguments.Select(
+                (argument, index) => Reader(parameters[index].ParameterType, argument)
+            ),
         ];
-        return arguments.Any(x => x is null)
+        return readers.Any(x => x is null)
             ? null
-            : new ConstructorReader(constructor, arguments!);
+            : new ConstructorReader(constructor, readers!);
     }
 
-    private static bool IsValueTuple(Type type)
+    /// <summary>
+    /// The constructor call the element is, when it is one.
+    /// </summary>
+    private static NewExpression? Construction(Expression? element)
     {
-        return type.IsGenericType
-            && type.Namespace == nameof(System)
-            && type.Name.StartsWith(nameof(ValueTuple) + "`", StringComparison.Ordinal);
+        return QueryElement.Resolved(element) switch
+        {
+            NewExpression creation => creation,
+            MemberInitExpression initialization => initialization.NewExpression,
+            _ => null,
+        };
     }
 }

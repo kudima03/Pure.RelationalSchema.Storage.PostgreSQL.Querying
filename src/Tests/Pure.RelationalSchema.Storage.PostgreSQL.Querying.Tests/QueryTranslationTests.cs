@@ -4,16 +4,10 @@ using Pure.Primitives.String;
 using Pure.RelationalSchema.Abstractions.Column;
 using Pure.RelationalSchema.Storage.Abstractions;
 
-// The tests of queries that ran in memory are skipped until they are translated.
-#pragma warning disable xUnit1004
-
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying.Tests;
 
 public sealed record QueryTranslationTests : IClassFixture<QueryingFixture>, IDisposable
 {
-    private const string Untranslatable =
-        "Queries that cannot be translated to SQL throw instead of running in memory.";
-
     private readonly QueryingFixture _fixture;
 
     private readonly RecordingConnection _connection;
@@ -167,12 +161,12 @@ public sealed record QueryTranslationTests : IClassFixture<QueryingFixture>, IDi
         Assert.All(_connection.Statements, x => Assert.Contains(" LIMIT ", x));
     }
 
-    [Fact(Skip = Untranslatable)]
+    [Fact]
     public void ReturnsDefaultsWhenNoElementIsFound()
     {
-        IQueryable<IRow> none = Customers.Where(x =>
-            x.Cells[_fixture.CustomerName].Value.TextValue == "Zed"
-        );
+        IQueryable<IRow> none = Customers
+            .Where(x => x.Cells[_fixture.CustomerName].Value.TextValue == "Zed")
+            .OrderBy(x => x.Cells[_fixture.CustomerId].Value.TextValue);
 
         Assert.Null(none.FirstOrDefault());
         Assert.Null(none.LastOrDefault());
@@ -295,32 +289,6 @@ public sealed record QueryTranslationTests : IClassFixture<QueryingFixture>, IDi
         Assert.Contains(" WHERE ", Assert.Single(_connection.Statements));
     }
 
-    [Fact(Skip = Untranslatable)]
-    public void ReadsQueriesHeldByRowsInMemory()
-    {
-        IQueryable<IRow> notes = Notes;
-
-        string[] customers =
-        [
-            .. Customers
-                .Select(customer => new { Customer = customer, Notes = notes })
-                .SelectMany(
-                    x =>
-                        x.Notes.Where(note =>
-                            note.Cells[_fixture.NoteCustomer].Value.TextValue
-                            == x.Customer.Cells[_fixture.CustomerId].Value.TextValue
-                        ),
-                    (x, note) =>
-                        x.Customer.Cells[_fixture.CustomerName].Value.TextValue
-                        + ":"
-                        + note.Cells[_fixture.NoteText].Value.TextValue
-                )
-                .OrderBy(x => x),
-        ];
-
-        Assert.Equal(["Ann:vip", "Cid:new"], customers);
-    }
-
     [Fact]
     public void JoinsTablesOfOneSchemaInOneStatement()
     {
@@ -364,8 +332,8 @@ public sealed record QueryTranslationTests : IClassFixture<QueryingFixture>, IDi
         _ = Assert.Single(_connection.Statements);
     }
 
-    [Fact(Skip = Untranslatable)]
-    public void JoinsTablesOfDifferentSchemasInMemory()
+    [Fact]
+    public void JoinsTablesOfDifferentSchemasInOneStatement()
     {
         string[] notes =
         [
@@ -386,31 +354,11 @@ public sealed record QueryTranslationTests : IClassFixture<QueryingFixture>, IDi
         ];
 
         Assert.Equal(["Ann:vip", "Cid:new"], notes);
-        Assert.Equal(2, _connection.Statements.Count);
-        Assert.All(_connection.Statements, x => Assert.Contains(" WHERE ", x));
+        Assert.Contains(" JOIN ", Assert.Single(_connection.Statements));
     }
 
-    [Fact(Skip = Untranslatable)]
-    public void JoinsTablesOfDifferentConnectionsInMemory()
-    {
-        RecordingConnection other = new(_fixture.Connection);
-
-        int count = Customers
-            .Join(
-                new PostgreSqlStoredSchemaDataSet(_fixture.Shop, other)[_fixture.Orders],
-                x => x.Cells[_fixture.CustomerId].Value.TextValue,
-                x => x.Cells[_fixture.OrderCustomer].Value.TextValue,
-                (customer, order) => order
-            )
-            .Count();
-
-        Assert.Equal(3, count);
-        _ = Assert.Single(_connection.Statements);
-        _ = Assert.Single(other.Statements);
-    }
-
-    [Fact(Skip = Untranslatable)]
-    public void FiltersByCorrelatedQueryOfAnotherSchemaInMemory()
+    [Fact]
+    public void FiltersByCorrelatedQueryOfAnotherSchemaInOneStatement()
     {
         IQueryable<IRow> notes = Notes;
 
@@ -428,7 +376,7 @@ public sealed record QueryTranslationTests : IClassFixture<QueryingFixture>, IDi
         ];
 
         Assert.Equal(["Ann", "Cid"], names);
-        Assert.DoesNotContain(_connection.Statements, x => x.Contains(" WHERE "));
+        Assert.Contains("EXISTS", Assert.Single(_connection.Statements));
     }
 
     [Fact]
@@ -470,17 +418,35 @@ public sealed record QueryTranslationTests : IClassFixture<QueryingFixture>, IDi
         Assert.Contains(" UNION ", Assert.Single(_connection.Statements));
     }
 
-    [Fact(Skip = Untranslatable)]
-    public void ConcatenatesRowsOfDifferentTablesInMemory()
+    [Fact]
+    public void ConcatenatesScalarsOfDifferentSchemasInOneStatement()
     {
-        IRow[] rows = [.. Customers.Concat(Orders)];
+        int count = Customers
+            .Select(x => x.Cells[_fixture.CustomerName].Value.TextValue)
+            .Concat(Notes.Select(x => x.Cells[_fixture.NoteText].Value.TextValue))
+            .Count();
 
-        Assert.Equal(6, rows.Length);
-        Assert.Equal(2, _connection.Statements.Count);
+        Assert.Equal(5, count);
+        Assert.Contains(" UNION ", Assert.Single(_connection.Statements));
     }
 
-    [Fact(Skip = Untranslatable)]
-    public void ReadsCellsOfUnsupportedColumnTypesInMemory()
+    [Fact]
+    public void ThrowsWhenASetOperationCombinesRowsOfDifferentTables()
+    {
+        NotSupportedException exception = Assert.Throws<NotSupportedException>(() =>
+            Customers.Concat(Orders).Count()
+        );
+
+        Assert.Equal(
+            "The query operator Concat combines rows of different tables, so it "
+                + "cannot be translated to SQL.",
+            exception.Message
+        );
+        Assert.Empty(_connection.Statements);
+    }
+
+    [Fact]
+    public void ReadsDateTimeCellsAsTheirTextInSql()
     {
         IRow row = Assert.Single(
             Customers.Where(x =>
@@ -490,33 +456,53 @@ public sealed record QueryTranslationTests : IClassFixture<QueryingFixture>, IDi
         );
 
         Assert.Equal("Ann", row.Cells[_fixture.CustomerName].Value.TextValue);
-        Assert.DoesNotContain(" WHERE ", Assert.Single(_connection.Statements));
-    }
-
-    [Fact(Skip = Untranslatable)]
-    public void RunsUntranslatableOperatorsInMemoryOverTranslatedSources()
-    {
-        string[] names =
-        [
-            .. Customers
-                .Where(x => x.Cells[_fixture.CustomerActive].Value.TextValue == "True")
-                .Select(x => Shout(x.Cells[_fixture.CustomerName].Value.TextValue))
-                .OrderBy(x => x),
-        ];
-
-        Assert.Equal(["ANN!", "CID!"], names);
+        Assert.Equal(
+            "01/01/2000 00:00:00",
+            row.Cells[_fixture.CustomerBorn].Value.TextValue
+        );
         Assert.Contains(" WHERE ", Assert.Single(_connection.Statements));
     }
 
-    [Fact(Skip = Untranslatable)]
-    public void ReadsOtherRowMembersInMemory()
+    [Fact]
+    public void ReadsTheColumnsOfRowsInSql()
     {
         Assert.Equal(3, Customers.Count(x => x.Cells.Count == 4));
         Assert.Equal(
             3,
             Customers.Count(x => x.Cells[x.Cells.Keys.First()].Value.TextValue != "")
         );
-        Assert.DoesNotContain(_connection.Statements, x => x.Contains("COUNT("));
+        Assert.Equal(
+            3,
+            Customers
+                .Select(x => new { Customer = x })
+                .Count(x => x.Customer.Cells.Count == 4)
+        );
+        Assert.Equal(
+            3,
+            Customers
+                .Join(
+                    Orders,
+                    x => x.Cells[x.Cells.Keys.First()].Value.TextValue,
+                    x => x.Cells[x.Cells.Keys.First()].Value.TextValue,
+                    (customer, order) => order.Cells.Count
+                )
+                .Count(x => x == 6)
+        );
+        Assert.Equal(
+            3,
+            Customers
+                .SelectMany(
+                    customer =>
+                        Orders.Where(order =>
+                            order.Cells[_fixture.OrderCustomer].Value.TextValue
+                            == customer.Cells[_fixture.CustomerId].Value.TextValue
+                        ),
+                    (customer, order) => order.Cells.Count
+                )
+                .Count(x => x == 6)
+        );
+        Assert.Equal(5, _connection.Statements.Count);
+        Assert.All(_connection.Statements, x => Assert.Contains("COUNT(", x));
     }
 
     [Fact]
@@ -530,7 +516,7 @@ public sealed record QueryTranslationTests : IClassFixture<QueryingFixture>, IDi
         Assert.DoesNotContain(_connection.Statements, x => x.Contains("COUNT("));
     }
 
-    [Fact(Skip = Untranslatable)]
+    [Fact]
     public void ExecutesThroughTheProvider()
     {
         IQueryable rows = Customers.Provider.CreateQuery(Customers.Expression);
@@ -557,14 +543,62 @@ public sealed record QueryTranslationTests : IClassFixture<QueryingFixture>, IDi
     }
 
     [Fact]
+    public void ExecutesElementsAndSequencesThroughTheProvider()
+    {
+        IQueryProvider provider = Customers.Provider;
+        IQueryable<int> none = Customers
+            .Where(x => x.Cells[_fixture.CustomerName].Value.TextValue == "Zed")
+            .Select(x => x.Cells[_fixture.CustomerName].Value.TextValue.Length);
+        IQueryable<string> names = Customers.Select(x =>
+            x.Cells[_fixture.CustomerName].Value.TextValue
+        );
+        IQueryable<IRow> ordered = Customers.OrderBy(x =>
+            x.Cells[_fixture.CustomerId].Value.TextValue
+        );
+
+        Assert.Equal(
+            0,
+            provider.Execute(
+                Expression.Call(
+                    typeof(Queryable),
+                    nameof(Queryable.FirstOrDefault),
+                    [typeof(int)],
+                    none.Expression
+                )
+            )
+        );
+        _ = Assert.IsType<IRow>(
+            provider.Execute(
+                Expression.Call(
+                    typeof(Queryable),
+                    nameof(Queryable.First),
+                    [typeof(IRow)],
+                    ordered.Expression
+                )
+            )
+, exactMatch: false);
+        Assert.Equal(3, Count((IEnumerable)provider.Execute(names.Expression)!));
+        Assert.Equal(3, Count(provider.CreateQuery(names.Expression)));
+        Assert.Equal(3, provider.Execute<IEnumerable<IRow>>(ordered.Expression).Count());
+        Assert.Equal(3, provider.Execute<IEnumerable<object?>>(names.Expression).Count());
+        Assert.Equal(
+            "The sequence of System.String returned by the query operator Select is "
+                + "read by enumerating the query.",
+            Assert.Throws<NotSupportedException>(() =>
+                provider.Execute<IEnumerable<string>>(names.Expression)
+            ).Message
+        );
+    }
+
+    [Fact]
     public void ThrowsOnTextOfTablesInsteadOfRecursingThroughTheirTree()
     {
         _ = Assert.Throws<NotSupportedException>(Customers.ToString);
         _ = Assert.Throws<NotSupportedException>(Customers.Expression.ToString);
     }
 
-    [Fact(Skip = Untranslatable)]
-    public void JoinsInMemoryWhenResultsHoldRows()
+    [Fact]
+    public void JoinsRowsWithScalarsInOneStatement()
     {
         string[] totals =
         [
@@ -588,8 +622,77 @@ public sealed record QueryTranslationTests : IClassFixture<QueryingFixture>, IDi
         ];
 
         Assert.Equal(["Ann:100", "Ann:250", "Cid:40"], totals);
+        Assert.Contains(" JOIN ", Assert.Single(_connection.Statements));
+    }
+
+    [Fact]
+    public void ReadsRowsOfProjections()
+    {
+        IRow[] orders =
+        [
+            .. Customers.Join(
+                Orders,
+                x => x.Cells[_fixture.CustomerId].Value.TextValue,
+                x => x.Cells[_fixture.OrderCustomer].Value.TextValue,
+                (customer, order) => order
+            ),
+        ];
+        IRow[] same = [.. Customers.Select(x => x)];
+        IRow[] held = [.. Customers.Select(x => new { Row = x }).Select(x => x.Row)];
+        (IRow Row, string Name)[] named =
+        [
+            .. Customers.Select(x => new ValueTuple<IRow, string>(x, "")
+            {
+                Item2 = x.Cells[_fixture.CustomerName].Value.TextValue,
+            }),
+        ];
+
+        Assert.Equal(3, orders.Length);
+        Assert.All(orders, x => Assert.Equal(6, x.Cells.Count));
+        Assert.Equal(3, same.Length);
+        Assert.All(same, x => Assert.Equal(4, x.Cells.Count));
+        Assert.Equal(3, held.Length);
+        Assert.All(held, x => Assert.Equal(4, x.Cells.Count));
+        Assert.Equal(
+            ["Ann", "Bob", "Cid"],
+            named.Select(x => x.Row.Cells[_fixture.CustomerName].Value.TextValue).Order()
+        );
+        Assert.All(
+            named,
+            x => Assert.Equal(x.Row.Cells[_fixture.CustomerName].Value.TextValue, x.Name)
+        );
+        Assert.Equal(4, _connection.Statements.Count);
+    }
+
+    [Fact]
+    public void ReadsRowsOfFlattenedCollections()
+    {
+        IRow[] flattened =
+        [
+            .. Customers.SelectMany(customer =>
+                Orders.Where(order =>
+                    order.Cells[_fixture.OrderCustomer].Value.TextValue
+                    == customer.Cells[_fixture.CustomerId].Value.TextValue
+                )
+            ),
+        ];
+        IRow[] paired =
+        [
+            .. Customers.SelectMany(
+                customer =>
+                    Orders.Where(order =>
+                        order.Cells[_fixture.OrderCustomer].Value.TextValue
+                        == customer.Cells[_fixture.CustomerId].Value.TextValue
+                    ),
+                (customer, order) => order
+            ),
+        ];
+
+        Assert.Equal(3, flattened.Length);
+        Assert.All(flattened, x => Assert.Equal(6, x.Cells.Count));
+        Assert.Equal(3, paired.Length);
+        Assert.All(paired, x => Assert.Equal(6, x.Cells.Count));
         Assert.Equal(2, _connection.Statements.Count);
-        Assert.DoesNotContain(_connection.Statements, x => x.Contains(" JOIN "));
     }
 
     [Fact]
@@ -631,21 +734,6 @@ public sealed record QueryTranslationTests : IClassFixture<QueryingFixture>, IDi
     }
 
     [Fact]
-    public void ThrowsWhenAQueryReadsTablesOfDifferentSchemas()
-    {
-        NotSupportedException exception = Assert.Throws<NotSupportedException>(() =>
-            Customers.Concat(Notes).Count()
-        );
-
-        Assert.Equal(
-            "The query operator Count reads tables of more than one schema or "
-                + "connection, so it cannot be translated to SQL.",
-            exception.Message
-        );
-        Assert.Empty(_connection.Statements);
-    }
-
-    [Fact]
     public void ThrowsWhenAQueryReadsTablesOfDifferentConnections()
     {
         using RecordingConnection other = new(_fixture.Connection);
@@ -654,8 +742,14 @@ public sealed record QueryTranslationTests : IClassFixture<QueryingFixture>, IDi
             other
         )[_fixture.Customers];
 
-        _ = Assert.Throws<NotSupportedException>(() =>
+        NotSupportedException exception = Assert.Throws<NotSupportedException>(() =>
             Customers.Concat(customers).Count()
+        );
+
+        Assert.Equal(
+            "The query operator Count reads tables of more than one connection, so "
+                + "it cannot be translated to SQL.",
+            exception.Message
         );
         Assert.Empty(_connection.Statements);
         Assert.Empty(other.Statements);
@@ -682,7 +776,7 @@ public sealed record QueryTranslationTests : IClassFixture<QueryingFixture>, IDi
     public void ThrowsWhenAResultCannotBeRead()
     {
         NotSupportedException exception = Assert.Throws<NotSupportedException>(() =>
-            Customers.Select(x => new { Customer = x }).ToArray()
+            Customers.Select(x => x.Cells[_fixture.CustomerName].Value).ToArray()
         );
 
         Assert.StartsWith(
@@ -699,20 +793,20 @@ public sealed record QueryTranslationTests : IClassFixture<QueryingFixture>, IDi
     }
 
     [Fact]
-    public void ThrowsWhenRowsHoldQueriesOfAnotherSchema()
+    public void ThrowsWhenRowsHoldQueries()
     {
-        IQueryable<IRow> notes = Notes;
+        IQueryable<IRow> orders = Orders;
 
         _ = Assert.Throws<NotSupportedException>(() =>
             Customers
-                .Select(customer => new { Customer = customer, Notes = notes })
+                .Select(customer => new { Customer = customer, Orders = orders })
                 .SelectMany(
                     x =>
-                        x.Notes.Where(note =>
-                            note.Cells[_fixture.NoteCustomer].Value.TextValue
+                        x.Orders.Where(order =>
+                            order.Cells[_fixture.OrderCustomer].Value.TextValue
                             == x.Customer.Cells[_fixture.CustomerId].Value.TextValue
                         ),
-                    (x, note) => note.Cells[_fixture.NoteText].Value.TextValue
+                    (x, order) => order.Cells[_fixture.OrderTotal].Value.TextValue
                 )
                 .ToArray()
         );
@@ -729,30 +823,6 @@ public sealed record QueryTranslationTests : IClassFixture<QueryingFixture>, IDi
                 Customers.Provider.Execute(Expression.Constant(3))
             ).Message
         );
-    }
-
-    [Fact]
-    public void ReadsTablesThroughTheProvider()
-    {
-        Assert.Equal(
-            3,
-            Customers.Provider.Execute<IEnumerable<IRow>>(Customers.Expression).Count()
-        );
-        Assert.Equal(
-            3,
-            Customers.Provider.Execute(
-                Expression.Call(
-                    typeof(Queryable),
-                    nameof(Queryable.Count),
-                    [typeof(IRow)],
-                    Customers.Expression
-                )
-            )
-        );
-        IQueryable rows = Customers.Provider.CreateQuery(Customers.Expression);
-
-        Assert.Equal(typeof(IRow), rows.ElementType);
-        Assert.Equal(3, Count(rows));
     }
 
     public void Dispose()
