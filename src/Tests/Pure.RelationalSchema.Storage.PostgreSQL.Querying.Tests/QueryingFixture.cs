@@ -45,6 +45,8 @@ public sealed record QueryingFixture : IDisposable
         NoteText = new Column(new String("Text"), new StringColumnType());
         WordId = new Column(new String("Id"), new LongColumnType());
         WordText = new Column(new String("Text"), new StringColumnType());
+        EventId = new Column(new String("Id"), new LongColumnType());
+        EventAt = new Column(new String("At"), new DateTimeColumnType());
 
         Customers = new Table(
             new String("Customers"),
@@ -58,8 +60,9 @@ public sealed record QueryingFixture : IDisposable
         );
         Notes = new Table(new String("Notes"), [NoteCustomer, NoteText], []);
         Words = new Table(new String("Words"), [WordId, WordText], []);
+        Events = new Table(new String("Events"), [EventId, EventAt], []);
 
-        Shop = new Schema(new String("Shop"), [Customers, Orders, Words], []);
+        Shop = new Schema(new String("Shop"), [Customers, Orders, Words, Events], []);
         Crm = new Schema(new String("Crm"), [Notes], []);
 
         TestSchema.Create(Connection, Shop);
@@ -95,6 +98,15 @@ public sealed record QueryingFixture : IDisposable
             ["8", "E'\\u00a0nbsp\\u00a0'"],
             ["9", "'MiXeD'"]
         );
+        TestSchema.Insert(
+            Connection,
+            Shop,
+            Events,
+            ["1", "'0999-01-02 03:04:05'"],
+            ["2", "'2024-12-31 23:59:59'"],
+            ["3", "'1970-10-11 12:00:00'"],
+            ["4", "'2000-01-01 10:20:30.7'"]
+        );
         TestSchema.Insert(Connection, Crm, Notes, ["1", "'vip'"], ["3", "'new'"]);
 
         TestSchema.CreateTable(Connection, "", Notes);
@@ -114,6 +126,8 @@ public sealed record QueryingFixture : IDisposable
     public ITable Notes { get; }
 
     public ITable Words { get; }
+
+    public ITable Events { get; }
 
     public IColumn CustomerId { get; }
 
@@ -142,6 +156,10 @@ public sealed record QueryingFixture : IDisposable
     public IColumn WordId { get; }
 
     public IColumn WordText { get; }
+
+    public IColumn EventId { get; }
+
+    public IColumn EventAt { get; }
 
     public void Dispose()
     {

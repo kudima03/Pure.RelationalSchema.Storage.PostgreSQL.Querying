@@ -19,7 +19,7 @@ internal sealed record PostgreSqlQueryable<T> : IOrderedQueryable<T>
 
     public IEnumerator<T> GetEnumerator()
     {
-        return Provider.Execute<IEnumerable<T>>(Expression).GetEnumerator();
+        return PostgreSqlQueryProvider.Enumerate<T>(Expression).GetEnumerator();
     }
 
     IEnumerator IEnumerable.GetEnumerator()

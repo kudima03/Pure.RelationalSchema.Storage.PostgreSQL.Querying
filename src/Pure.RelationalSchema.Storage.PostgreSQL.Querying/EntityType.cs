@@ -1,8 +1,7 @@
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Globalization;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
-using System.Reflection.Emit;
-using Pure.Primitives.Abstractions.String;
+using System.Runtime.CompilerServices;
 using Pure.Primitives.String.Operations;
 using Pure.RelationalSchema.Abstractions.Table;
 using Pure.RelationalSchema.HashCodes;
@@ -10,104 +9,105 @@ using Pure.RelationalSchema.HashCodes;
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying;
 
 /// <summary>
-/// A type generated for a stored table, so that the translator, which maps a table
-/// from the element type of a query root, names the table and its columns by their
-/// hashes. It is abstract: its properties are only read by the translator, never
-/// invoked.
+/// A type built for a stored table, so that the translator, which maps a table from
+/// the element type of a query root, names the table and its columns by their
+/// hashes. It is built from reflection objects rather than emitted, so that it needs
+/// no dynamic code: it delegates to <see cref="ElementRow"/>, so that it is a row,
+/// and its properties (see <see cref="EntityProperty"/>) are only read by the
+/// translator, never invoked.
 /// </summary>
-internal sealed record EntityType
+internal sealed class EntityType : TypeDelegator
 {
-    private static readonly ModuleBuilder Module = AssemblyBuilder
-        .DefineDynamicAssembly(
-            new AssemblyName(
-                "Pure.RelationalSchema.Storage.PostgreSQL.Querying.Entities"
-            ),
-            AssemblyBuilderAccess.Run
-        )
-        .DefineDynamicModule("Entities");
+    private static readonly Dictionary<(string Schema, string Table), EntityType> Types =
+    [];
 
-    private static readonly Dictionary<(string Schema, string Table), Type> Types = [];
+    private readonly TableAttribute _table;
 
-    private readonly ITable _table;
+    private readonly IReadOnlyList<EntityProperty> _properties;
 
-    private readonly IString _schemaName;
-
-    public EntityType(ITable table, IString schemaName)
+    private EntityType(ITable table, string schema)
+        : base(typeof(ElementRow))
     {
-        _table = table;
-        _schemaName = schemaName;
+        HexString hash = new(new TableHash(table));
+        Name = hash.TextValue;
+        _table = new TableAttribute(new TrimmedHash(hash).TextValue);
+        if (schema.Length != 0)
+        {
+            _table.Schema = schema;
+        }
+        _properties =
+        [
+            .. table.Columns.Select(x => new EntityProperty(this, new ColumnProperty(x))),
+        ];
     }
 
-    public Type Value
+    public override string Name { get; }
+
+    /// <summary>
+    /// The type of a table of a schema, built once.
+    /// </summary>
+    public static EntityType Of(ITable table, string schema)
     {
-        get
+        (string, string) key = (schema, new HexString(new TableHash(table)).TextValue);
+        lock (Types)
         {
-            string schema = _schemaName.TextValue;
-            (string, string) key = (
-                schema,
-                new HexString(new TableHash(_table)).TextValue
-            );
-            lock (Types)
+            if (!Types.TryGetValue(key, out EntityType? type))
             {
-                if (!Types.TryGetValue(key, out Type? type))
-                {
-                    type = Emitted(schema, Types.Count);
-                    Types.Add(key, type);
-                }
-                return type;
+                type = new EntityType(table, schema);
+                Types.Add(key, type);
             }
+            return type;
         }
     }
 
-    private Type Emitted(string schema, int number)
+    public PropertyInfo Property(string name)
     {
-        TypeBuilder type = Module.DefineType(
-            number.ToString(CultureInfo.InvariantCulture),
-            TypeAttributes.Public | TypeAttributes.Abstract
-        );
-        type.SetCustomAttribute(
-            new CustomAttributeBuilder(
-                typeof(TableAttribute).GetConstructor([typeof(string)])!,
-                [new TrimmedHash(new HexString(new TableHash(_table))).TextValue],
-                schema.Length == 0
-                    ? []
-                    :
-                    [
-                        typeof(TableAttribute).GetProperty(
-                            nameof(TableAttribute.Schema)
-                        )!,
-                    ],
-                schema.Length == 0 ? [] : [schema]
-            )
-        );
-        foreach (
-            ColumnProperty column in _table.Columns.Select(x => new ColumnProperty(x))
-        )
-        {
-            PropertyBuilder property = type.DefineProperty(
-                column.Name,
-                PropertyAttributes.None,
-                column.Type,
-                Type.EmptyTypes
-            );
-            property.SetGetMethod(
-                type.DefineMethod(
-                    column.Name,
-                    MethodAttributes.Public
-                        | MethodAttributes.Abstract
-                        | MethodAttributes.Virtual
-                        | MethodAttributes.SpecialName,
-                    column.Type,
-                    Type.EmptyTypes
-                )
-            );
-            property.SetCustomAttribute(
-                new CustomAttributeBuilder(
-                    typeof(ColumnAttribute).GetConstructor([typeof(string)])!,
-                    [column.ColumnName]
-                )
-            );
-        }
-        return type.CreateType();
+        return _properties.Single(x => x.Name == name);
+    }
+
+    [DynamicallyAccessedMembers(
+        DynamicallyAccessedMemberTypes.PublicProperties
+            | DynamicallyAccessedMemberTypes.NonPublicProperties
+    )]
+    public override PropertyInfo[] GetProperties(BindingFlags bindingAttr)
+    {
+        return [.. _properties];
+    }
+
+    public override object[] GetCustomAttributes(bool inherit)
+    {
+        Attribute[] attributes = [_table];
+        return attributes;
+    }
+
+    public override object[] GetCustomAttributes(Type attributeType, bool inherit)
+    {
+        Attribute[] attributes = IsDefined(attributeType, inherit) ? [_table] : [];
+        return attributes;
+    }
+
+    public override bool IsDefined(Type attributeType, bool inherit)
+    {
+        return attributeType.IsAssignableFrom(typeof(TableAttribute));
+    }
+
+    public override IList<CustomAttributeData> GetCustomAttributesData()
+    {
+        return [];
+    }
+
+    public override bool Equals(object? o)
+    {
+        return ReferenceEquals(this, o);
+    }
+
+    public override bool Equals(Type? o)
+    {
+        return ReferenceEquals(this, o);
+    }
+
+    public override int GetHashCode()
+    {
+        return RuntimeHelpers.GetHashCode(this);
     }
 }

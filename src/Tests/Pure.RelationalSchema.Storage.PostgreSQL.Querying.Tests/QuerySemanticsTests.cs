@@ -24,6 +24,8 @@ public sealed record QuerySemanticsTests : IClassFixture<QueryingFixture>
 
     private IColumn CustomerName => _fixture.CustomerName;
 
+    private IColumn EventId => _fixture.EventId;
+
     private IQueryable<IRow> Words =>
         new PostgreSqlStoredSchemaDataSet(_fixture.Shop, _fixture.Connection)[
             _fixture.Words
@@ -32,6 +34,11 @@ public sealed record QuerySemanticsTests : IClassFixture<QueryingFixture>
     private IQueryable<IRow> Customers =>
         new PostgreSqlStoredSchemaDataSet(_fixture.Shop, _fixture.Connection)[
             _fixture.Customers
+        ];
+
+    private IQueryable<IRow> Events =>
+        new PostgreSqlStoredSchemaDataSet(_fixture.Shop, _fixture.Connection)[
+            _fixture.Events
         ];
 
     [Fact(Skip = "LENGTH counts code points, string.Length counts UTF-16 code units.")]
@@ -190,6 +197,24 @@ public sealed record QuerySemanticsTests : IClassFixture<QueryingFixture>
                     x.Cells[_fixture.OrderCode].Value.TextValue
                     == "00000000-0000-0000-0000-00000000000A"
                 )
+        );
+    }
+
+    [Fact]
+    public void ReadsDateTimeCellsAsTheirText()
+    {
+        AssertLikeInMemory(
+            Events,
+            rows => Times(rows.Where(x => x.Cells[EventId].Value.TextValue != "4"))
+        );
+    }
+
+    [Fact]
+    public void TruncatesFractionalSecondsOfDateTimeText()
+    {
+        AssertLikeInMemory(
+            Events,
+            rows => Times(rows.Where(x => x.Cells[EventId].Value.TextValue == "4"))
         );
     }
 
@@ -464,6 +489,12 @@ public sealed record QuerySemanticsTests : IClassFixture<QueryingFixture>
         );
     }
 
+    [Fact(Skip = "The translator rejects Last without an ordering.")]
+    public void ReturnsTheLastRowOfAnUnorderedQuery()
+    {
+        AssertLikeInMemory(Customers, rows => Name(rows.Last()));
+    }
+
     private IQueryable<IRow> OrdersTable()
     {
         return new PostgreSqlStoredSchemaDataSet(_fixture.Shop, _fixture.Connection)[
@@ -481,6 +512,16 @@ public sealed record QuerySemanticsTests : IClassFixture<QueryingFixture>
         return
         [
             .. rows.Select(x => x.Cells[_fixture.WordId].Value.TextValue)
+                .AsEnumerable()
+                .Order(StringComparer.Ordinal),
+        ];
+    }
+
+    private string[] Times(IQueryable<IRow> rows)
+    {
+        return
+        [
+            .. rows.Select(x => x.Cells[_fixture.EventAt].Value.TextValue)
                 .AsEnumerable()
                 .Order(StringComparer.Ordinal),
         ];

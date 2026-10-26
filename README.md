@@ -12,8 +12,9 @@ PostgreSQL row querying for the **Pure** relational schema ecosystem — `IQuery
 `Pure.RelationalSchema.Storage.PostgreSQL.Querying` reads rows from a live PostgreSQL database through the storage abstractions defined in `Pure.RelationalSchema.Storage`:
 
 - **Row access** — `PostgreSqlStoredTableDataSet` exposes the rows of a table as both `IQueryable<IRow>` and `IAsyncEnumerable<IRow>`, backed by a `SELECT` of all columns.
-- **Query translation** — LINQ composed over the stored tables of one schema runs as one PostgreSQL `SELECT`, translated by [`Linq.Expressions.Translation.PostgreSql`](https://www.nuget.org/packages/Linq.Expressions.Translation.PostgreSql). A query that cannot be translated, such as one across schemas, throws `NotSupportedException` instead of running in memory.
+- **Query translation** — LINQ composed over the stored tables of one connection runs as one PostgreSQL `SELECT`, translated by [`Linq.Expressions.Translation.PostgreSql`](https://www.nuget.org/packages/Linq.Expressions.Translation.PostgreSql). A query that cannot be translated, such as one across connections, throws `NotSupportedException` instead of running in memory.
 - **Schema-wide access** — `PostgreSqlStoredSchemaDataSet` maps every `ITable` of an `ISchema` to its `PostgreSqlStoredTableDataSet`. It implements `IPostgreSqlStoredSchemaDataSet`, which is defined in the separate `Pure.RelationalSchema.Storage.PostgreSQL.Abstractions` package.
+- **Native AOT** — the package is `IsAotCompatible`: the entity types the translator maps are built from reflection objects, not emitted, and no query is executed in memory.
 
 This package covers reads only. Creating the tables and inserting rows is handled by the related packages listed below.
 
@@ -30,9 +31,9 @@ The tables must already exist with the hash-based names produced by `Pure.Relati
 
 ## Query translation
 
-The `Provider` of a `PostgreSqlStoredTableDataSet` translates the LINQ composed over it. When a query is enumerated (or a terminal operator such as `Count` or `First` runs), the whole query is translated into one `SELECT` and executed. Its sources must all be stored tables of **one schema** — the same `IDbConnection` instance and the same schema name.
+The `Provider` of a `PostgreSqlStoredTableDataSet` translates the LINQ composed over it. When a query is enumerated (or a terminal operator such as `Count` or `First` runs), the whole query is translated into one `SELECT` and executed. Its sources must all be stored tables of **one connection** — the same `IDbConnection` instance; their schemas may differ.
 
-Nothing runs in memory: a query that reads several schemas or connections, reads other sources, or uses an operator, member or result shape that cannot be translated throws `NotSupportedException` (with the translator's exception as `InnerException` when it is the translator that refused). So a join of two tables of one schema is one `SELECT ... JOIN ...`, while a join of tables of two schemas throws; call `AsEnumerable()` on each part to combine them in memory yourself.
+Nothing runs in memory: a query that reads several connections, reads other sources, combines rows of different tables in a set operation, or uses an operator, member or result shape that cannot be translated throws `NotSupportedException` (with the translator's exception as `InnerException` when it is the translator that refused). So a join of two tables, of one schema or of two, is one `SELECT ... JOIN ...`, while a join of tables of two connections throws; call `AsEnumerable()` on each part to combine them in memory yourself.
 
 Rows are read as cells of text, so the provider translates cell reads of the form `row.Cells[column].Value.TextValue`, where `column` is a constant or captured `IColumn` of a queried table, into the SQL text of the column, matching what enumeration returns:
 
@@ -41,10 +42,11 @@ Rows are read as cells of text, so the provider translates cell reads of the for
 | `string` | the value |
 | `int`, `ushort`, `long`, `uint`, `ulong`, `uuid` | `CAST(... AS text)` |
 | `bool` | `True` / `False` |
+| `datetime` | `MM/dd/yyyy HH:mm:ss`, composed from `EXTRACT` parts |
 
-Cells of the other column types (`date`, `time`, `datetime`, `double`, `float`, `determined_hash`) cannot be translated, nor can any other use of a row (`row.Cells.Count`, a cell's `IString` itself, ...).
+`row.Cells.Count` and `row.Cells.Keys` are translated as the columns of the row's table. Cells of the other column types (`date`, `time`, `double`, `float`, `determined_hash`) cannot be translated, nor can any other use of a row (a cell's `IString` itself, ...).
 
-A translated query returns rows of one table (through `Where`, `OrderBy`, `Skip`, `Take`, `Distinct`, set operations of the same table and the element operators), scalars, anonymous types and value tuples of scalars; any other result shape throws `NotSupportedException`. Results keep the semantics of enumeration, except that SQL compares and orders text by the database collation.
+A translated query returns rows of its tables (through `Where`, `OrderBy`, `Skip`, `Take`, `Distinct`, `Cast`, set operations of the same table, the element operators and the `Select`, `Join` and `SelectMany` projections that return a row), scalars, and constructed objects — anonymous types, value tuples, ... — whose constructor arguments are rows, scalars or such objects; any other result shape throws `NotSupportedException`. Results keep the semantics of enumeration, except that SQL compares and orders text by the database collation.
 
 ```csharp
 IQueryable<IRow> customers = shop[customersTable];

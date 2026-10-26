@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Queries over tables of several schemas of one connection (joins, correlated subqueries, set operations of scalars) are translated to one SQL statement instead of throwing.
+- Cells of `datetime` columns are translated to their invariant text (`MM/dd/yyyy HH:mm:ss`).
+- `row.Cells.Count` and `row.Cells.Keys` are translated as the columns of the row's table.
+- Rows are read from projections: `Select`, `Join` and `SelectMany` results that are rows, and constructed objects (anonymous types, value tuples, ...) holding rows.
+- `Cast<IRow>` and `OfType<IRow>` are translated.
+
+### Changed
+
+- The package is Native AOT compatible (`IsAotCompatible`): the entity types the translator maps are built from reflection objects instead of Reflection.Emit, and results are no longer executed through `EnumerableQuery`.
+- A set operation over rows of different tables throws `NotSupportedException` instead of reaching PostgreSQL.
+- `IQueryProvider.Execute<TResult>` with a sequence result type returns rows and untyped sequences; other sequences are read by enumerating the query.
+
 ## [0.1.0-preview.0.5.0] - 2026-10-23
 
 ### Changed
