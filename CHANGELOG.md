@@ -7,9 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-preview.0.6.0] - 2026-10-26
+
 ### Added
 
-- Queries over tables of several schemas of one connection (joins, correlated subqueries, set operations of scalars) are translated to one SQL statement instead of throwing.
+- Queries over tables of several schemas of one connection (joins, correlated subqueries, set operations of scalars) are translated to one SQL statement instead of being split into one statement per schema and combined in memory.
 - Cells of `datetime` columns are translated to their invariant text (`MM/dd/yyyy HH:mm:ss`).
 - `row.Cells.Count` and `row.Cells.Keys` are translated as the columns of the row's table.
 - Rows are read from projections: `Select`, `Join` and `SelectMany` results that are rows, and constructed objects (anonymous types, value tuples, ...) holding rows.
@@ -19,7 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The package is Native AOT compatible (`IsAotCompatible`): the entity types the translator maps are built from reflection objects instead of Reflection.Emit, and results are no longer executed through `EnumerableQuery`.
 - A set operation over rows of different tables throws `NotSupportedException` instead of reaching PostgreSQL.
+- A query that cannot run as one SQL statement — over several connections or other sources, or using an operator, member or result shape that cannot be translated — throws `NotSupportedException` (with the translator's exception as `InnerException` when the translator refused) instead of running partly in memory with LINQ to Objects.
 - `IQueryProvider.Execute<TResult>` with a sequence result type returns rows and untyped sequences; other sequences are read by enumerating the query.
+- Updated the `Linq.Expressions.Translation.PostgreSql` dependency from 0.1.0-preview.0.2.1 to 0.1.0-preview.0.4.0.
 
 ## [0.1.0-preview.0.5.0] - 2026-10-23
 
