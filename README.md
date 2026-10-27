@@ -35,7 +35,7 @@ The `Provider` of a `PostgreSqlStoredTableDataSet` translates the LINQ composed 
 
 Nothing runs in memory: a query that reads several connections, reads other sources, combines rows of different tables in a set operation, or uses an operator, member or result shape that cannot be translated throws `NotSupportedException` (with the translator's exception as `InnerException` when it is the translator that refused). So a join of two tables, of one schema or of two, is one `SELECT ... JOIN ...`, while a join of tables of two connections throws; call `AsEnumerable()` on each part to combine them in memory yourself.
 
-Rows are read as cells of text, so the provider translates cell reads of the form `row.Cells[column].Value.TextValue`, where `column` is a constant or captured `IColumn` of a queried table, into the SQL text of the column, matching what enumeration returns:
+Rows are read as cells of text, so the provider translates cell reads of the form `row.Cells[column].Value.TextValue`, where `column` is a constant or captured `IColumn` of a queried table, into the SQL text of the column, matching what enumeration returns. A NULL cell is empty text, as it is when enumerated (`COALESCE(..., '')`), so NULL cells compare, join, group and order as empty text does in LINQ to Objects:
 
 | Column type | Text in SQL |
 |---|---|
@@ -43,10 +43,16 @@ Rows are read as cells of text, so the provider translates cell reads of the for
 | `int`, `ushort`, `long`, `uint`, `ulong`, `uuid` | `CAST(... AS text)` |
 | `bool` | `True` / `False` |
 | `datetime` | `MM/dd/yyyy HH:mm:ss`, composed from `EXTRACT` parts |
+| `date` | `MM/dd/yyyy`, composed from `EXTRACT` parts |
+| `time` | `HH:mm`, composed from `EXTRACT` parts |
+| `double`, `float` | the shortest round-trip text, as .NET writes it: `CAST(... AS text)` with the exponent in upper case, and in plain form where .NET uses it and PostgreSQL does not (`1e15` to `1e17` for `double`, `1e6` to `1e9` for `float`) |
+| `determined_hash` | the column itself, a `bytea`, whose bytes are read as UTF-8 text; a comparison with text compares the bytes, so a `string` method over it (`Length`, `ToUpper`, ...) is that of PostgreSQL over the bytes |
 
-`row.Cells.Count` and `row.Cells.Keys` are translated as the columns of the row's table. Cells of the other column types (`date`, `time`, `double`, `float`, `determined_hash`) cannot be translated, nor can any other use of a row (a cell's `IString` itself, ...).
+`row.Cells.Count` and `row.Cells.Keys` are translated as the columns of the row's table. Cells of a column of any other type cannot be translated (the exception names the column and its type), nor can any other use of a row (a cell's `IString` itself, ...).
 
-A translated query returns rows of its tables (through `Where`, `OrderBy`, `Skip`, `Take`, `Distinct`, `Cast`, set operations of the same table, the element operators and the `Select`, `Join` and `SelectMany` projections that return a row), scalars, and constructed objects — anonymous types, value tuples, ... — whose constructor arguments are rows, scalars or such objects; any other result shape throws `NotSupportedException`. Results keep the semantics of enumeration, except that SQL compares and orders text by the database collation.
+A translated query returns rows of its tables (through `Where`, `OrderBy`, `Skip`, `Take`, `Distinct`, `DistinctBy`, `Cast`, set operations of the same table, the element operators and the `Select`, `Join`, `GroupJoin` and `SelectMany` projections that return a row), scalars — `DateTime`, `DateOnly`, `TimeOnly` and `TimeSpan` values among them, read from `timestamp`, `date`, `time` and `interval` results — and constructed objects — anonymous types, value tuples, ... — whose constructor arguments are rows, scalars or such objects, also when a `GroupJoin` or a set operation (`Union`, `Concat`, ...) builds them; any other result shape throws `NotSupportedException`. Results keep the semantics of enumeration, except that SQL compares and orders text by the database collation.
+
+Several aggregates of stored tables are read as one row in one statement from a one-element in-memory root whose selector holds the aggregates: `new[] { 0 }.AsQueryable().Select(_ => new { Orders = orders.LongCount(), Revenue = orders.Sum(...) })`, created through the provider of one of the tables (`orders.Provider.CreateQuery<T>(expression)`), runs as `SELECT (SELECT COUNT(*) ...), (SELECT SUM(...) ...)` without `FROM`. The tables must be stored tables of one connection.
 
 ```csharp
 IQueryable<IRow> customers = shop[customersTable];
@@ -74,7 +80,7 @@ var totals = customers
 
 - [`Pure.RelationalSchema.Storage`](https://github.com/kudima03/Pure.RelationalSchema.Storage/tree/0.1.0-preview.8.0.0) — storage abstractions (`IStoredSchemaDataSet`, `IStoredTableDataSet`, `IRow`) that this package implements
 - [`Pure.RelationalSchema.Storage.PostgreSQL.Abstractions`](https://github.com/kudima03/Pure.RelationalSchema.Storage.PostgreSQL.Abstractions/tree/0.1.0-preview.0.1.0) — `IPostgreSqlStoredSchemaDataSet`, the interface implemented by `PostgreSqlStoredSchemaDataSet`
-- [`Linq.Expressions.Translation.PostgreSql`](https://github.com/kudima03/Linq.Expressions.Translation.PostgreSql/tree/0.1.0-preview.0.2.1) — translates LINQ expression trees into PostgreSQL `SELECT` statements
+- [`Linq.Expressions.Translation.PostgreSql`](https://github.com/kudima03/Linq.Expressions.Translation.PostgreSql/tree/0.1.0-preview.0.5.1) — translates LINQ expression trees into PostgreSQL `SELECT` statements
 - [`Pure.RelationalSchema.HashCodes`](https://github.com/kudima03/Pure.RelationalSchema.HashCodes/tree/3.3.0) — hash codes used to derive PostgreSQL object names
 - [`Pure.Primitives.Abstractions`](https://github.com/kudima03/Pure.Primitives.Abstractions/tree/4.3.0) — base interfaces for primitive types (`IString`, etc.)
 - [`Pure.Primitives`](https://github.com/kudima03/Pure.Primitives/tree/3.7.0) — concrete primitive type implementations

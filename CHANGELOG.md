@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Cells of `date`, `time`, `double`, `float` and `determined_hash` columns are translated to the text enumeration gives them (`MM/dd/yyyy`, `HH:mm`, the shortest round-trip text of a number, the bytes as UTF-8 text); the exception for a column of an unknown type names the column and its type.
+- Results holding `DateTime`, `DateOnly`, `TimeOnly` and `TimeSpan` values (and their nullable forms) are read from `timestamp`, `date`, `time` and `interval` results.
+- `DistinctBy` is translated and its elements are read; the elements of `ExceptBy`, `IntersectBy`, `UnionBy`, `MinBy` and `MaxBy` are read too, though the translator still rejects those operators.
+- One row of several aggregates over stored tables is read in one statement without `FROM` from a one-element in-memory root (`new[] { 0 }.AsQueryable().Select(_ => new { Orders = orders.LongCount(), ... })`).
+- The results of `GroupJoin` and of set operations (`Union`, `Concat`, ...) that build objects are read.
+
+### Fixed
+
+- A NULL cell is read as empty text in a translated query, as it is when enumerated, so NULL cells compare, join, group and order like empty text (`COALESCE(..., '')`) instead of as SQL `NULL` (a NULL `bool` cell was `False`).
+
+### Changed
+
+- Updated the `Linq.Expressions.Translation.PostgreSql` dependency from 0.1.0-preview.0.4.0 to 0.1.0-preview.0.5.1.
+
 ## [0.1.0-preview.0.6.0] - 2026-10-26
 
 ### Added
