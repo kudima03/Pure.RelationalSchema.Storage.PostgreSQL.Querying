@@ -217,7 +217,7 @@ public sealed record EntityTypeTests
         List<char> values = [];
         while (enumerator.MoveNext())
         {
-            values.Add(((IChar)enumerator.Current!).CharValue);
+            values.Add(((IChar)enumerator.Current).CharValue);
         }
         return string.Concat(values);
     }

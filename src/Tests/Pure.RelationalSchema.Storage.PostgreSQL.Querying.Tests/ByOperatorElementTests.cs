@@ -14,15 +14,25 @@ namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying.Tests;
 /// </summary>
 public sealed record ByOperatorElementTests : IClassFixture<QueryingFixture>, IDisposable
 {
-    private const string ExceptByText = "The translator rejects ExceptBy.";
+    private const string ExceptByText =
+        "The translator rejects ExceptBy "
+        + "(kudima03/Linq.Expressions.Translation.PostgreSql#70).";
 
-    private const string IntersectByText = "The translator rejects IntersectBy.";
+    private const string IntersectByText =
+        "The translator rejects IntersectBy "
+        + "(kudima03/Linq.Expressions.Translation.PostgreSql#71).";
 
-    private const string UnionByText = "The translator rejects UnionBy.";
+    private const string UnionByText =
+        "The translator rejects UnionBy "
+        + "(kudima03/Linq.Expressions.Translation.PostgreSql#72).";
 
-    private const string MinByText = "The translator rejects MinBy.";
+    private const string MinByText =
+        "The translator rejects MinBy "
+        + "(kudima03/Linq.Expressions.Translation.PostgreSql#73).";
 
-    private const string MaxByText = "The translator rejects MaxBy.";
+    private const string MaxByText =
+        "The translator rejects MaxBy "
+        + "(kudima03/Linq.Expressions.Translation.PostgreSql#74).";
 
     private readonly QueryingFixture _fixture;
 
