@@ -15,10 +15,14 @@ internal static class TestSchema
         new Dictionary<Type, string>
         {
             [typeof(BoolColumnType)] = "boolean",
+            [typeof(DateColumnType)] = "date",
             [typeof(DateTimeColumnType)] = "timestamp",
+            [typeof(DoubleColumnType)] = "double precision",
+            [typeof(FloatColumnType)] = "real",
             [typeof(IntColumnType)] = "integer",
             [typeof(LongColumnType)] = "bigint",
             [typeof(StringColumnType)] = "text",
+            [typeof(TimeColumnType)] = "time",
             [typeof(UIntColumnType)] = "bigint",
             [typeof(ULongColumnType)] = "numeric",
             [typeof(UShortColumnType)] = "integer",
