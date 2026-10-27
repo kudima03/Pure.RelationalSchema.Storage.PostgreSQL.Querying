@@ -218,7 +218,7 @@ public sealed record QuerySemanticsTests : IClassFixture<QueryingFixture>
         );
     }
 
-    [Fact(Skip = "Math.Round is not translated.")]
+    [Fact]
     public void RoundsDecimalsHalfToEven()
     {
         AssertLikeInMemory(
@@ -235,7 +235,7 @@ public sealed record QuerySemanticsTests : IClassFixture<QueryingFixture>
         );
     }
 
-    [Fact(Skip = "Math.Round is not translated.")]
+    [Fact]
     public void RoundsDoublesHalfToEven()
     {
         AssertLikeInMemory(
