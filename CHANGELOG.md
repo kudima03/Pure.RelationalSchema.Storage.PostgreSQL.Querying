@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-preview.0.7.0] - 2026-10-27
+
 ### Added
 
 - Cells of `date`, `time`, `double`, `float` and `determined_hash` columns are translated to the text enumeration gives them (`MM/dd/yyyy`, `HH:mm`, the shortest round-trip text of a number, the bytes as UTF-8 text); the exception for a column of an unknown type names the column and its type.
