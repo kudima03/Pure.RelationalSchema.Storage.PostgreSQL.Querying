@@ -9,7 +9,10 @@ namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying;
 /// The expression an element of a query stands for, with the parameters of the
 /// projections replaced by the elements of their sources: a constant
 /// <see cref="ElementRow"/> for a row of a stored table, the constructor call of an
-/// anonymous type or value tuple for its members, or null when it is not known.
+/// anonymous type or value tuple for its members, or null when it is not known. The
+/// operators that return elements of their source, the <c>...By</c> ones among
+/// them, keep its element, and so does a set operation, whose sides have one
+/// element (<see cref="RowSetOperations"/> rejects rows of different tables).
 /// </summary>
 internal sealed record QueryElement
 {
@@ -33,6 +36,12 @@ internal sealed record QueryElement
         nameof(Queryable.SkipLast),
         nameof(Queryable.TakeLast),
         nameof(Queryable.Distinct),
+        nameof(Queryable.DistinctBy),
+        nameof(Queryable.ExceptBy),
+        nameof(Queryable.IntersectBy),
+        nameof(Queryable.UnionBy),
+        nameof(Queryable.MinBy),
+        nameof(Queryable.MaxBy),
         nameof(Queryable.Reverse),
         nameof(Queryable.Cast),
         nameof(Queryable.OfType),
@@ -141,16 +150,15 @@ internal sealed record QueryElement
     private static Expression? Of(MethodCallExpression call)
     {
         string name = call.Method.Name;
-        return RowPreserving.Contains(name)
+        return RowPreserving.Contains(name) || SetOperations.Contains(name)
             ? Of(call.Arguments[0])
-            : SetOperations.Contains(name)
-            ? AreRowsOfOneTable(call.Arguments[0], call.Arguments[1])
-                ? Of(call.Arguments[0])
-                : null
             : name switch
             {
                 nameof(Queryable.Select) => Projected(call, 1),
-                nameof(Queryable.Join) => Projected(call, 4),
+                nameof(Queryable.Join) or nameof(Queryable.GroupJoin) => Projected(
+                    call,
+                    4
+                ),
                 nameof(Queryable.SelectMany) when call.Arguments.Count == 3 => Projected(
                     call,
                     2

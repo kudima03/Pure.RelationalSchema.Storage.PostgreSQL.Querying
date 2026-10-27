@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Diagnostics.CodeAnalysis;
@@ -7,9 +8,10 @@ using Linq.Expressions.Translation.PostgreSql;
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying;
 
 /// <summary>
-/// A query operator whose tree must read stored tables of one connection only. The
-/// translator turns it into SQL, which runs as one statement and whose rows are read
-/// as the values of the result.
+/// A query operator whose tree must read stored tables of one connection only, or
+/// one row of aggregates over them from a one-element in-memory root. The translator
+/// turns it into SQL, which runs as one statement and whose rows are read as the
+/// values of the result.
 /// </summary>
 internal sealed record TranslatedQuery
 {
@@ -66,14 +68,24 @@ internal sealed record TranslatedQuery
         [
             .. roots.OfType<PostgreSqlStoredTableDataSet>(),
         ];
-        if (tables.Length == 0 || tables.Length != roots.Count)
+        bool oneConnection = tables.All(x =>
+            ReferenceEquals(tables[0].Connection, x.Connection)
+        );
+        IQueryable[] others =
+        [
+            .. roots.Where(x => x is not PostgreSqlStoredTableDataSet),
+        ];
+        if (
+            tables.Length == 0
+            || !(others.Length == 0 || (oneConnection && IsOneRow(others)))
+        )
         {
             throw new NotSupportedException(
                 $"The query operator {Name} reads sources other than stored tables, "
                     + "so it cannot be translated to SQL."
             );
         }
-        if (!tables.All(x => ReferenceEquals(tables[0].Connection, x.Connection)))
+        if (!oneConnection)
         {
             throw new NotSupportedException(
                 $"The query operator {Name} reads tables of more than one connection, "
@@ -88,6 +100,20 @@ internal sealed record TranslatedQuery
                     + "from a SQL result."
             )
             : Values(tables[0].Connection, Sql(tables), reader);
+    }
+
+    /// <summary>
+    /// Whether the sources that are not stored tables are the one-element in-memory
+    /// root of one row of aggregates over the tables.
+    /// </summary>
+    private static bool IsOneRow(IReadOnlyList<IQueryable> others)
+    {
+        if (others is not [EnumerableQuery row])
+        {
+            return false;
+        }
+        IEnumerator elements = ((IEnumerable)row).GetEnumerator();
+        return elements.MoveNext() && !elements.MoveNext();
     }
 
     [UnconditionalSuppressMessage(

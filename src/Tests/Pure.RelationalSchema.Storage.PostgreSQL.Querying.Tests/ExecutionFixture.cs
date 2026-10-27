@@ -18,8 +18,8 @@ using Table = Table.Table;
 /// cells are translated, with edge values, duplicates and NULLs; <c>Parents</c> and
 /// <c>Children</c> share keys that are NULL, empty, repeated or unmatched; and
 /// <c>Entries</c> of a second schema on the same connection has such keys too.
-/// <c>Extras</c> has a column of every type whose cells are not translated (#28).
-/// Only the rows whose id starts with 9 hold NULL cells.
+/// <c>Extras</c> has a column of each of the other types. Only the rows whose id
+/// starts with 9 hold NULL cells.
 /// </summary>
 public sealed record ExecutionFixture : IDisposable
 {
@@ -208,7 +208,9 @@ public sealed record ExecutionFixture : IDisposable
             Connection,
             Store,
             Extras,
-            ["1", "'2024-02-29'", "'03:04:05'", "0.1", "0.1", "decode('616263', 'hex')"]
+            ["1", "'2024-02-29'", "'03:04:05'", "0.1", "0.1", "decode('616263', 'hex')"],
+            ["2", "'0999-12-31'", "'23:59:59.5'", "1e15", "1e6", "decode('c3a9', 'hex')"],
+            ["91", "NULL", "NULL", "NULL", "NULL", "NULL"]
         );
         TestSchema.Insert(
             Connection,

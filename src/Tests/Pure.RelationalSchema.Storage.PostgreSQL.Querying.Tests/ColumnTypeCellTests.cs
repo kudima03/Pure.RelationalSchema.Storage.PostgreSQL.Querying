@@ -1,15 +1,23 @@
 using System.Data;
+using Pure.Primitives.Abstractions.String;
 using Pure.RelationalSchema.Abstractions.Column;
+using Pure.RelationalSchema.Abstractions.ColumnType;
+using Pure.RelationalSchema.Abstractions.Schema;
+using Pure.RelationalSchema.Abstractions.Table;
+using Pure.RelationalSchema.ColumnType;
 using Pure.RelationalSchema.Storage.Abstractions;
-
-// The tests of cells the translation does not read yet are skipped until it does.
-#pragma warning disable xUnit1004
+using String = Pure.Primitives.String.String;
 
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying.Tests;
 
+using Column = Column.Column;
+using Schema = Schema.Schema;
+using Table = Table.Table;
+
 /// <summary>
 /// Cells of every column type can be read in a query, as one statement, with the
-/// text enumerating the table gives them.
+/// text enumerating the table gives them; a column of an unknown type names itself
+/// when its cells cannot be.
 /// </summary>
 public sealed record ColumnTypeCellTests : IClassFixture<ColumnTypeFixture>
 {
@@ -36,37 +44,37 @@ public sealed record ColumnTypeCellTests : IClassFixture<ColumnTypeFixture>
         );
     }
 
-    [Fact(Skip = "Cells of date columns are not translated (#28).")]
+    [Fact]
     public void ReadsDateCellsAsTheirText()
     {
         AssertLikeEnumeration(rows => Texts(rows, _fixture.Day));
     }
 
-    [Fact(Skip = "Cells of date columns are not translated (#28).")]
+    [Fact]
     public void FiltersByDateCellText()
     {
         AssertLikeEnumeration(rows => Ids(rows, _fixture.Day, Text(_fixture.Day)));
     }
 
-    [Fact(Skip = "Cells of time columns are not translated (#28).")]
+    [Fact]
     public void ReadsTimeCellsAsTheirText()
     {
         AssertLikeEnumeration(rows => Texts(rows, _fixture.Clock));
     }
 
-    [Fact(Skip = "Cells of time columns are not translated (#28).")]
+    [Fact]
     public void FiltersByTimeCellText()
     {
         AssertLikeEnumeration(rows => Ids(rows, _fixture.Clock, Text(_fixture.Clock)));
     }
 
-    [Fact(Skip = "Cells of double columns are not translated (#28).")]
+    [Fact]
     public void ReadsDoubleCellsAsTheirText()
     {
         AssertLikeEnumeration(rows => Texts(rows, _fixture.Measure));
     }
 
-    [Fact(Skip = "Cells of double columns are not translated (#28).")]
+    [Fact]
     public void FiltersByDoubleCellText()
     {
         AssertLikeEnumeration(rows =>
@@ -74,54 +82,53 @@ public sealed record ColumnTypeCellTests : IClassFixture<ColumnTypeFixture>
         );
     }
 
-    [Fact(Skip = "Cells of float columns are not translated (#28).")]
+    [Fact]
     public void ReadsFloatCellsAsTheirText()
     {
         AssertLikeEnumeration(rows => Texts(rows, _fixture.Ratio));
     }
 
-    [Fact(Skip = "Cells of float columns are not translated (#28).")]
+    [Fact]
     public void FiltersByFloatCellText()
     {
         AssertLikeEnumeration(rows => Ids(rows, _fixture.Ratio, Text(_fixture.Ratio)));
     }
 
-    [Fact(Skip = "Cells of determined_hash columns are not translated (#28).")]
+    [Fact]
     public void ReadsDeterminedHashCellsAsTheirText()
     {
         AssertLikeEnumeration(rows => Texts(rows, _fixture.Digest));
     }
 
-    [Fact(Skip = "Cells of determined_hash columns are not translated (#28).")]
+    [Fact]
     public void FiltersByDeterminedHashCellText()
     {
-        AssertLikeEnumeration(rows =>
-            Ids(rows, _fixture.Digest, Text(_fixture.Digest))
-        );
+        AssertLikeEnumeration(rows => Ids(rows, _fixture.Digest, Text(_fixture.Digest)));
     }
 
-    [Theory(Skip = "The exception names neither the column nor its type (#28).")]
-    [InlineData("Day", "date")]
-    [InlineData("Clock", "time")]
-    [InlineData("Measure", "double")]
-    [InlineData("Ratio", "float")]
-    [InlineData("Digest", "determined_hash")]
-    public void NamesTheColumnAndItsTypeWhenItsCellsCannotBeRead(
-        string name,
-        string type
-    )
+    [Fact]
+    public void NamesTheColumnAndItsTypeWhenItsCellsCannotBeRead()
     {
-        IColumn column = Column(name);
+        IColumn id = new Column(new String("Id"), new LongColumnType());
+        IColumn column = new Column(new String("Weird"), new CustomColumnType());
+        ITable table = new Table(new String("Oddities"), [id, column], []);
+        ISchema schema = new Schema(new String("Lab"), [table], []);
+        using RecordingConnection connection = new RecordingConnection(
+            _fixture.Connection
+        );
+
+        IQueryable<IRow> rows = new PostgreSqlStoredSchemaDataSet(schema, connection)[
+            table
+        ];
 
         NotSupportedException exception = Assert.Throws<NotSupportedException>(() =>
-            Table(_fixture.Connection)
-                .Where(x => x.Cells[column].Value.TextValue != "")
-                .ToArray()
+            rows.Where(x => x.Cells[column].Value.TextValue != "").ToArray()
         );
 
         string messages = string.Join(" | ", Messages(exception));
-        Assert.True(messages.Contains(name, StringComparison.Ordinal), messages);
-        Assert.True(messages.Contains(type, StringComparison.Ordinal), messages);
+        Assert.True(messages.Contains("'Weird'", StringComparison.Ordinal), messages);
+        Assert.True(messages.Contains("'custom'", StringComparison.Ordinal), messages);
+        Assert.Empty(connection.Statements);
     }
 
     private static IEnumerable<string> Messages(Exception? exception)
@@ -196,5 +203,10 @@ public sealed record ColumnTypeCellTests : IClassFixture<ColumnTypeFixture>
         Assert.NotEmpty(expected);
         Assert.Equal(expected, actual);
         _ = Assert.Single(connection.Statements);
+    }
+
+    private sealed record CustomColumnType : IColumnType
+    {
+        public IString Name { get; } = new String("custom");
     }
 }

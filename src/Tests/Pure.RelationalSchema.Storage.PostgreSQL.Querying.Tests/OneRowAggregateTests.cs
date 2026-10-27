@@ -2,9 +2,6 @@ using System.Linq.Expressions;
 using System.Text;
 using Pure.RelationalSchema.Storage.Abstractions;
 
-// The tests of one row of aggregates are skipped until such a root is translated.
-#pragma warning disable xUnit1004
-
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying.Tests;
 
 /// <summary>
@@ -14,11 +11,6 @@ namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying.Tests;
 /// </summary>
 public sealed record OneRowAggregateTests : IClassFixture<QueryingFixture>, IDisposable
 {
-    private const string NotTranslated =
-        "The one-element constant root of aggregates is refused as a source other "
-        + "than a stored table, and the translator refuses it as an in-memory "
-        + "source (#31).";
-
     private static readonly int[] One = [0];
 
     private readonly QueryingFixture _fixture;
@@ -52,7 +44,7 @@ public sealed record OneRowAggregateTests : IClassFixture<QueryingFixture>, IDis
     private IQueryable<IRow> ExpectedNotes =>
         new PostgreSqlStoredSchemaDataSet(_fixture.Crm, _expected)[_fixture.Notes];
 
-    [Fact(Skip = NotTranslated)]
+    [Fact]
     public void ReadsSeveralAggregatesOfATableAsOneRow()
     {
         IQueryable<IRow> orders = Orders;
@@ -79,7 +71,7 @@ public sealed record OneRowAggregateTests : IClassFixture<QueryingFixture>, IDis
         AssertOneStatementWithoutFrom("COUNT(", "SUM(", "MAX(");
     }
 
-    [Fact(Skip = NotTranslated)]
+    [Fact]
     public void ReadsAggregatesOfTablesOfTwoSchemasAsOneRow()
     {
         IQueryable<IRow> customers = Customers;
@@ -106,7 +98,7 @@ public sealed record OneRowAggregateTests : IClassFixture<QueryingFixture>, IDis
         AssertOneStatementWithoutFrom("COUNT(");
     }
 
-    [Fact(Skip = NotTranslated)]
+    [Fact]
     public void ReadsFilteredAggregatesAndQuantifiersAsOneRow()
     {
         IQueryable<IRow> customers = Customers;
@@ -150,7 +142,7 @@ public sealed record OneRowAggregateTests : IClassFixture<QueryingFixture>, IDis
         AssertOneStatementWithoutFrom("COUNT(", "MIN(");
     }
 
-    [Fact(Skip = NotTranslated)]
+    [Fact]
     public void ReadsTheOneRowOfAggregatesAsASingleElement()
     {
         IQueryable<IRow> customers = Customers;
@@ -197,6 +189,62 @@ public sealed record OneRowAggregateTests : IClassFixture<QueryingFixture>, IDis
         );
         Assert.Empty(_connection.Statements);
         Assert.Empty(other.Statements);
+    }
+
+    [Fact]
+    public void ThrowsWhenTheInMemoryRootHasSeveralElements()
+    {
+        int[] two = [0, 1];
+        IQueryable<IRow> orders = Orders;
+
+        NotSupportedException exception = Assert.Throws<NotSupportedException>(() =>
+            Orders
+                .Provider.CreateQuery<long>(
+                    two.AsQueryable().Select(_ => orders.LongCount()).Expression
+                )
+                .ToArray()
+        );
+
+        Assert.Equal(
+            "The query operator Select reads sources other than stored tables, so it "
+                + "cannot be translated to SQL.",
+            exception.Message
+        );
+        Assert.Empty(_connection.Statements);
+    }
+
+    [Fact]
+    public void ThrowsWhenTheOneRowReadsSourcesOtherThanStoredTables()
+    {
+        IQueryable<IRow> orders = Orders;
+        IQueryable<IRow> rows = Array.Empty<IRow>().AsQueryable();
+
+        NotSupportedException exception = Assert.Throws<NotSupportedException>(() =>
+            OneRow(_ => new ValueTuple<long, int>(orders.LongCount(), rows.Count()))
+                .ToArray()
+        );
+
+        Assert.Equal(
+            "The query operator Select reads sources other than stored tables, so it "
+                + "cannot be translated to SQL.",
+            exception.Message
+        );
+        Assert.Empty(_connection.Statements);
+    }
+
+    [Fact]
+    public void ThrowsWhenTheOneRowReadsNoTable()
+    {
+        NotSupportedException exception = Assert.Throws<NotSupportedException>(() =>
+            OneRow(_ => 1).ToArray()
+        );
+
+        Assert.Equal(
+            "The query operator Select reads sources other than stored tables, so it "
+                + "cannot be translated to SQL.",
+            exception.Message
+        );
+        Assert.Empty(_connection.Statements);
     }
 
     public void Dispose()

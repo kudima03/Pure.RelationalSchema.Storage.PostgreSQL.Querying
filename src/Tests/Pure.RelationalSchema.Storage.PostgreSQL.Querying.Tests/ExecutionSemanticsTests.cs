@@ -3,9 +3,6 @@ using System.Runtime.CompilerServices;
 using Pure.RelationalSchema.Abstractions.Column;
 using Pure.RelationalSchema.Storage.Abstractions;
 
-// The tests of semantics translation does not keep yet are skipped until it does.
-#pragma warning disable xUnit1004
-
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying.Tests;
 
 /// <summary>
@@ -17,14 +14,7 @@ namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying.Tests;
 /// </summary>
 public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
 {
-    private const string NullCells =
-        "NULL cells are NULL in translated queries, not empty text (#37).";
-
     private const string Thrown = "throws ";
-
-    private const string ConstructedResults =
-        "Results of GroupJoin and set operations that build objects cannot be read "
-        + "(#38).";
 
     private readonly ExecutionFixture _fixture;
 
@@ -86,7 +76,7 @@ public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Theory(Skip = NullCells)]
+    [Theory]
     [InlineData("Text")]
     [InlineData("Flag")]
     [InlineData("Small")]
@@ -119,13 +109,13 @@ public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
     [Theory]
     [InlineData("Text")]
     [InlineData("Flag")]
-    [InlineData("Small", Skip = NullCells)]
-    [InlineData("Number", Skip = NullCells)]
-    [InlineData("Big", Skip = NullCells)]
-    [InlineData("Unsigned", Skip = NullCells)]
-    [InlineData("Huge", Skip = NullCells)]
-    [InlineData("Code", Skip = NullCells)]
-    [InlineData("Moment", Skip = NullCells)]
+    [InlineData("Small")]
+    [InlineData("Number")]
+    [InlineData("Big")]
+    [InlineData("Unsigned")]
+    [InlineData("Huge")]
+    [InlineData("Code")]
+    [InlineData("Moment")]
     public void FiltersRowsByCellsDifferingFromText(string name)
     {
         IColumn column = Column(name);
@@ -137,11 +127,11 @@ public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
 
     [Theory]
     [InlineData("Text", "1")]
-    [InlineData("Text", "2", Skip = NullCells)]
+    [InlineData("Text", "2")]
     [InlineData("Text", "3")]
     [InlineData("Text", "4")]
     [InlineData("Flag", "1")]
-    [InlineData("Flag", "2", Skip = NullCells)]
+    [InlineData("Flag", "2")]
     [InlineData("Small", "2")]
     [InlineData("Number", "2")]
     [InlineData("Number", "3")]
@@ -168,8 +158,8 @@ public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
     }
 
     [Theory]
-    [InlineData("Text", Skip = NullCells)]
-    [InlineData("Flag", Skip = NullCells)]
+    [InlineData("Text")]
+    [InlineData("Flag")]
     [InlineData("Number")]
     [InlineData("Code")]
     [InlineData("Moment")]
@@ -183,7 +173,7 @@ public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Theory(Skip = NullCells)]
+    [Theory]
     [InlineData("Text")]
     [InlineData("Flag")]
     [InlineData("Number")]
@@ -225,7 +215,8 @@ public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
                     (
                         x.Cells[ChildKey].Value.TextValue == "a"
                         && x.Cells[ChildLabel].Value.TextValue != "x"
-                    ) || x.Cells[ChildNumber].Value.TextValue == "3"
+                    )
+                    || x.Cells[ChildNumber].Value.TextValue == "3"
                 )
                 .Select(x => x.Cells[ChildId].Value.TextValue)
         );
@@ -233,7 +224,7 @@ public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
 
     [Theory]
     [InlineData(false)]
-    [InlineData(true, Skip = NullCells)]
+    [InlineData(true)]
     public void FiltersRowsByMembershipOfCells(bool nullCells)
     {
         string[] keys = ["a", ""];
@@ -247,7 +238,7 @@ public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
 
     [Theory]
     [InlineData(false)]
-    [InlineData(true, Skip = NullCells)]
+    [InlineData(true)]
     public void FiltersRowsByMembershipOfNumberCells(bool nullCells)
     {
         string[] numbers = ["0", "-1", "2147483647"];
@@ -261,7 +252,7 @@ public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
 
     [Theory]
     [InlineData(false)]
-    [InlineData(true, Skip = NullCells)]
+    [InlineData(true)]
     public void FiltersRowsByTheLengthOfCells(bool nullCells)
     {
         AssertLikeEnumeration(db =>
@@ -273,7 +264,7 @@ public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
 
     [Theory]
     [InlineData(false)]
-    [InlineData(true, Skip = NullCells)]
+    [InlineData(true)]
     public void ProjectsConcatenatedCells(bool nullCells)
     {
         AssertLikeEnumeration(db =>
@@ -292,7 +283,7 @@ public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
 
     [Theory]
     [InlineData(false)]
-    [InlineData(true, Skip = NullCells)]
+    [InlineData(true)]
     public void ProjectsConditionsOnCells(bool nullCells)
     {
         AssertLikeEnumeration(db =>
@@ -300,15 +291,15 @@ public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
                 .Select(x => new ValueTuple<string, string>(
                     x.Cells[ValueId].Value.TextValue,
                     x.Cells[Flag].Value.TextValue == "True" ? "yes"
-                    : x.Cells[Flag].Value.TextValue == "False" ? "no"
-                    : "none"
+                        : x.Cells[Flag].Value.TextValue == "False" ? "no"
+                        : "none"
                 ))
         );
     }
 
     [Theory]
     [InlineData(false)]
-    [InlineData(true, Skip = NullCells)]
+    [InlineData(true)]
     public void OrdersRowsByCells(bool nullCells)
     {
         AssertOrderedLikeEnumeration(db =>
@@ -321,7 +312,7 @@ public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
 
     [Theory]
     [InlineData(false)]
-    [InlineData(true, Skip = NullCells)]
+    [InlineData(true)]
     public void OrdersRowsByCellsOfEmptyAndNullText(bool nullCells)
     {
         AssertOrderedLikeEnumeration(db =>
@@ -334,7 +325,7 @@ public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
 
     [Theory]
     [InlineData(false)]
-    [InlineData(true, Skip = NullCells)]
+    [InlineData(true)]
     public void OrdersRowsByNumberCellsDescending(bool nullCells)
     {
         AssertOrderedLikeEnumeration(db =>
@@ -347,7 +338,7 @@ public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
 
     [Theory]
     [InlineData(false)]
-    [InlineData(true, Skip = NullCells)]
+    [InlineData(true)]
     public void OrdersRowsByTheLengthOfCells(bool nullCells)
     {
         AssertOrderedLikeEnumeration(db =>
@@ -384,7 +375,7 @@ public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
 
     [Theory]
     [InlineData(false)]
-    [InlineData(true, Skip = NullCells)]
+    [InlineData(true)]
     public void RemovesDuplicateCells(bool nullCells)
     {
         AssertLikeEnumeration(db =>
@@ -396,7 +387,7 @@ public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
 
     [Theory]
     [InlineData(false)]
-    [InlineData(true, Skip = NullCells)]
+    [InlineData(true)]
     public void RemovesDuplicateTuplesOfCells(bool nullCells)
     {
         AssertLikeEnumeration(db =>
@@ -411,7 +402,7 @@ public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
 
     [Theory]
     [InlineData(false)]
-    [InlineData(true, Skip = NullCells)]
+    [InlineData(true)]
     public void JoinsRowsOnCells(bool nullCells)
     {
         AssertLikeEnumeration(db =>
@@ -420,17 +411,18 @@ public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
                     Rows(db.Children, ChildId, nullCells),
                     x => x.Cells[ParentKey].Value.TextValue,
                     x => x.Cells[ChildKey].Value.TextValue,
-                    (parent, child) => new ValueTuple<string, string>(
-                        parent.Cells[ParentId].Value.TextValue,
-                        child.Cells[ChildId].Value.TextValue
-                    )
+                    (parent, child) =>
+                        new ValueTuple<string, string>(
+                            parent.Cells[ParentId].Value.TextValue,
+                            child.Cells[ChildId].Value.TextValue
+                        )
                 )
         );
     }
 
     [Theory]
     [InlineData(false)]
-    [InlineData(true, Skip = NullCells)]
+    [InlineData(true)]
     public void JoinsRowsOnNumberCells(bool nullCells)
     {
         AssertLikeEnumeration(db =>
@@ -439,17 +431,18 @@ public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
                     Rows(db.Children, ChildId, nullCells),
                     x => x.Cells[ParentNumber].Value.TextValue,
                     x => x.Cells[ChildNumber].Value.TextValue,
-                    (parent, child) => new ValueTuple<string, string>(
-                        parent.Cells[ParentId].Value.TextValue,
-                        child.Cells[ChildId].Value.TextValue
-                    )
+                    (parent, child) =>
+                        new ValueTuple<string, string>(
+                            parent.Cells[ParentId].Value.TextValue,
+                            child.Cells[ChildId].Value.TextValue
+                        )
                 )
         );
     }
 
     [Theory]
     [InlineData(false)]
-    [InlineData(true, Skip = NullCells)]
+    [InlineData(true)]
     public void JoinsRowsOnCompositeKeys(bool nullCells)
     {
         AssertLikeEnumeration(db =>
@@ -464,10 +457,11 @@ public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
                         x.Cells[ChildKey].Value.TextValue,
                         x.Cells[ChildNumber].Value.TextValue
                     ),
-                    (parent, child) => new ValueTuple<string, string>(
-                        parent.Cells[ParentId].Value.TextValue,
-                        child.Cells[ChildId].Value.TextValue
-                    )
+                    (parent, child) =>
+                        new ValueTuple<string, string>(
+                            parent.Cells[ParentId].Value.TextValue,
+                            child.Cells[ChildId].Value.TextValue
+                        )
                 )
         );
     }
@@ -488,7 +482,7 @@ public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
 
     [Theory]
     [InlineData(false)]
-    [InlineData(true, Skip = NullCells)]
+    [InlineData(true)]
     public void LeftJoinsRowsOnCells(bool nullCells)
     {
         AssertLikeEnumeration(db =>
@@ -501,17 +495,18 @@ public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
                 )
                 .SelectMany(
                     x => x.Children.DefaultIfEmpty(),
-                    (x, child) => new ValueTuple<string, string>(
-                        x.Parent.Cells[ParentId].Value.TextValue,
-                        child == null ? "-" : child.Cells[ChildLabel].Value.TextValue
-                    )
+                    (x, child) =>
+                        new ValueTuple<string, string>(
+                            x.Parent.Cells[ParentId].Value.TextValue,
+                            child == null ? "-" : child.Cells[ChildLabel].Value.TextValue
+                        )
                 )
         );
     }
 
     [Theory]
     [InlineData(false)]
-    [InlineData(true, Skip = NullCells)]
+    [InlineData(true)]
     public void CountsGroupsOfJoinedRows(bool nullCells)
     {
         AssertLikeEnumeration(db =>
@@ -528,7 +523,7 @@ public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = ConstructedResults)]
+    [Fact]
     public void ReadsTuplesOfGroupsOfJoinedRows()
     {
         AssertLikeEnumeration(db =>
@@ -537,17 +532,18 @@ public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
                     WithoutNull(db.Children, ChildId),
                     x => x.Cells[ParentNumber].Value.TextValue,
                     x => x.Cells[ChildNumber].Value.TextValue,
-                    (parent, children) => new ValueTuple<string, int>(
-                        parent.Cells[ParentId].Value.TextValue,
-                        children.Count()
-                    )
+                    (parent, children) =>
+                        new ValueTuple<string, int>(
+                            parent.Cells[ParentId].Value.TextValue,
+                            children.Count()
+                        )
                 )
         );
     }
 
     [Theory]
     [InlineData(false)]
-    [InlineData(true, Skip = NullCells)]
+    [InlineData(true)]
     public void JoinsCorrelatedRows(bool nullCells)
     {
         AssertLikeEnumeration(db =>
@@ -560,17 +556,18 @@ public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
                             child.Cells[ChildKey].Value.TextValue
                             == parent.Cells[ParentKey].Value.TextValue
                         ),
-                    (parent, child) => new ValueTuple<string, string>(
-                        parent.Cells[ParentId].Value.TextValue,
-                        child.Cells[ChildId].Value.TextValue
-                    )
+                    (parent, child) =>
+                        new ValueTuple<string, string>(
+                            parent.Cells[ParentId].Value.TextValue,
+                            child.Cells[ChildId].Value.TextValue
+                        )
                 );
         });
     }
 
     [Theory]
     [InlineData(false)]
-    [InlineData(true, Skip = NullCells)]
+    [InlineData(true)]
     public void CrossJoinsRowsOfTwoSchemas(bool nullCells)
     {
         AssertLikeEnumeration(db =>
@@ -579,17 +576,18 @@ public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
             return Rows(db.Parents, ParentId, nullCells)
                 .SelectMany(
                     x => entries,
-                    (parent, entry) => new ValueTuple<string, string>(
-                        parent.Cells[ParentKey].Value.TextValue,
-                        entry.Cells[EntryAmount].Value.TextValue
-                    )
+                    (parent, entry) =>
+                        new ValueTuple<string, string>(
+                            parent.Cells[ParentKey].Value.TextValue,
+                            entry.Cells[EntryAmount].Value.TextValue
+                        )
                 );
         });
     }
 
     [Theory]
     [InlineData(false)]
-    [InlineData(true, Skip = NullCells)]
+    [InlineData(true)]
     public void JoinsRowsOfTwoSchemas(bool nullCells)
     {
         AssertLikeEnumeration(db =>
@@ -598,17 +596,18 @@ public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
                     Rows(db.Entries, EntryId, nullCells),
                     x => x.Cells[ParentKey].Value.TextValue,
                     x => x.Cells[EntryKey].Value.TextValue,
-                    (parent, entry) => new ValueTuple<string, string>(
-                        parent.Cells[ParentId].Value.TextValue,
-                        entry.Cells[EntryAmount].Value.TextValue
-                    )
+                    (parent, entry) =>
+                        new ValueTuple<string, string>(
+                            parent.Cells[ParentId].Value.TextValue,
+                            entry.Cells[EntryAmount].Value.TextValue
+                        )
                 )
         );
     }
 
     [Theory]
     [InlineData(false)]
-    [InlineData(true, Skip = NullCells)]
+    [InlineData(true)]
     public void GroupsRowsByCells(bool nullCells)
     {
         AssertLikeEnumeration(db =>
@@ -620,7 +619,7 @@ public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
 
     [Theory]
     [InlineData(false)]
-    [InlineData(true, Skip = NullCells)]
+    [InlineData(true)]
     public void GroupsRowsByBoolCells(bool nullCells)
     {
         AssertLikeEnumeration(db =>
@@ -632,7 +631,7 @@ public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
 
     [Theory]
     [InlineData(false)]
-    [InlineData(true, Skip = NullCells)]
+    [InlineData(true)]
     public void AggregatesGroupsOfCells(bool nullCells)
     {
         AssertLikeEnumeration(db =>
@@ -677,7 +676,7 @@ public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
 
     [Theory]
     [InlineData(false)]
-    [InlineData(true, Skip = NullCells)]
+    [InlineData(true)]
     public void CountsRowsOfEmptyCells(bool nullCells)
     {
         AssertValueLikeEnumeration(db =>
@@ -699,7 +698,7 @@ public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
 
     [Theory]
     [InlineData(false)]
-    [InlineData(true, Skip = NullCells)]
+    [InlineData(true)]
     public void AveragesTheLengthsOfCells(bool nullCells)
     {
         AssertValueLikeEnumeration(db =>
@@ -726,7 +725,7 @@ public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
 
     [Theory]
     [InlineData(false)]
-    [InlineData(true, Skip = NullCells)]
+    [InlineData(true)]
     public void AnswersWhetherAnyCellIsEmpty(bool nullCells)
     {
         AssertValueLikeEnumeration(db =>
@@ -830,7 +829,7 @@ public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
 
     [Theory]
     [InlineData(false)]
-    [InlineData(true, Skip = NullCells)]
+    [InlineData(true)]
     public void FindsNumberCellsInTheTable(bool nullCells)
     {
         AssertValueLikeEnumeration(db =>
@@ -856,7 +855,7 @@ public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
 
     [Theory]
     [InlineData(false)]
-    [InlineData(true, Skip = NullCells)]
+    [InlineData(true)]
     public void FiltersRowsByCorrelatedExistence(bool nullCells)
     {
         AssertLikeEnumeration(db =>
@@ -886,7 +885,7 @@ public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
 
     [Theory]
     [InlineData(false)]
-    [InlineData(true, Skip = NullCells)]
+    [InlineData(true)]
     public void UnitesCellsOfTheTable(bool nullCells)
     {
         AssertLikeEnumeration(db =>
@@ -901,7 +900,7 @@ public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = ConstructedResults)]
+    [Fact]
     public void UnitesTuplesOfCells()
     {
         AssertLikeEnumeration(db =>
@@ -922,7 +921,7 @@ public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
 
     [Theory]
     [InlineData(false)]
-    [InlineData(true, Skip = NullCells)]
+    [InlineData(true)]
     public void IntersectsCellsOfTheTable(bool nullCells)
     {
         AssertLikeEnumeration(db =>
@@ -951,7 +950,7 @@ public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
 
     [Theory]
     [InlineData(false)]
-    [InlineData(true, Skip = NullCells)]
+    [InlineData(true)]
     public void UnitesCellsOfTwoTables(bool nullCells)
     {
         AssertLikeEnumeration(db =>
@@ -979,10 +978,7 @@ public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Theory(
-        Skip = "Cells of date, time, double, float and determined_hash columns are not "
-            + "translated (#28)."
-    )]
+    [Theory]
     [InlineData("Day")]
     [InlineData("Clock")]
     [InlineData("Measure")]
@@ -1000,7 +996,7 @@ public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "Results holding DateTime values cannot be read (#29).")]
+    [Fact]
     public void ReadsDateTimeValuesNextToCells()
     {
         DateTime since = new DateTime(2000, 1, 1);

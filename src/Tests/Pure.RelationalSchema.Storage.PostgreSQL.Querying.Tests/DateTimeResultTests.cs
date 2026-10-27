@@ -2,9 +2,6 @@ using System.Data;
 using Pure.RelationalSchema.Abstractions.Column;
 using Pure.RelationalSchema.Storage.Abstractions;
 
-// The tests of results the reader cannot read yet are skipped until it can.
-#pragma warning disable xUnit1004
-
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying.Tests;
 
 /// <summary>
@@ -33,7 +30,7 @@ public sealed record DateTimeResultTests : IClassFixture<QueryingFixture>, IDisp
 
     private IColumn Total => _fixture.OrderTotal;
 
-    [Fact(Skip = "Results holding DateTime values cannot be read (#29).")]
+    [Fact]
     public void ReadsDateTimesOfAnonymousTypes()
     {
         DateTime since = Since;
@@ -51,7 +48,7 @@ public sealed record DateTimeResultTests : IClassFixture<QueryingFixture>, IDisp
         AssertUnspecified(orders.SelectMany(x => new[] { x.Since, x.Shifted }));
     }
 
-    [Fact(Skip = "Results holding DateOnly values cannot be read (#29).")]
+    [Fact]
     public void ReadsDateOnlysOfAnonymousTypes()
     {
         DateOnly day = Day;
@@ -67,7 +64,7 @@ public sealed record DateTimeResultTests : IClassFixture<QueryingFixture>, IDisp
         );
     }
 
-    [Fact(Skip = "Results holding TimeOnly values cannot be read (#29).")]
+    [Fact]
     public void ReadsTimeOnlysOfAnonymousTypes()
     {
         TimeOnly time = Time;
@@ -83,7 +80,7 @@ public sealed record DateTimeResultTests : IClassFixture<QueryingFixture>, IDisp
         );
     }
 
-    [Fact(Skip = "Results holding TimeSpan values cannot be read (#29).")]
+    [Fact]
     public void ReadsTimeSpansOfAnonymousTypes()
     {
         DateTime since = Since;
@@ -101,7 +98,7 @@ public sealed record DateTimeResultTests : IClassFixture<QueryingFixture>, IDisp
         );
     }
 
-    [Fact(Skip = "Results holding DateTime values cannot be read (#29).")]
+    [Fact]
     public void ReadsDateTimesOfValueTuples()
     {
         DateTime since = Since;
@@ -117,7 +114,7 @@ public sealed record DateTimeResultTests : IClassFixture<QueryingFixture>, IDisp
         AssertUnspecified(orders.Select(x => x.Item2));
     }
 
-    [Fact(Skip = "Results holding DateOnly values cannot be read (#29).")]
+    [Fact]
     public void ReadsDateOnlysOfValueTuples()
     {
         DateOnly day = Day;
@@ -131,7 +128,7 @@ public sealed record DateTimeResultTests : IClassFixture<QueryingFixture>, IDisp
         );
     }
 
-    [Fact(Skip = "Results holding TimeOnly values cannot be read (#29).")]
+    [Fact]
     public void ReadsTimeOnlysOfValueTuples()
     {
         TimeOnly time = Time;
@@ -145,7 +142,7 @@ public sealed record DateTimeResultTests : IClassFixture<QueryingFixture>, IDisp
         );
     }
 
-    [Fact(Skip = "Results holding TimeSpan values cannot be read (#29).")]
+    [Fact]
     public void ReadsTimeSpansOfValueTuples()
     {
         DateTime since = Since;
@@ -159,7 +156,7 @@ public sealed record DateTimeResultTests : IClassFixture<QueryingFixture>, IDisp
         );
     }
 
-    [Fact(Skip = "Results holding DateTime values cannot be read (#29).")]
+    [Fact]
     public void ReadsNullableDateTimes()
     {
         DateTime since = Since;
@@ -178,7 +175,7 @@ public sealed record DateTimeResultTests : IClassFixture<QueryingFixture>, IDisp
         AssertUnspecified(orders.Select(x => x.Since!.Value));
     }
 
-    [Fact(Skip = "Results holding DateOnly values cannot be read (#29).")]
+    [Fact]
     public void ReadsNullableDateOnlys()
     {
         DateOnly day = Day;
@@ -194,7 +191,7 @@ public sealed record DateTimeResultTests : IClassFixture<QueryingFixture>, IDisp
         );
     }
 
-    [Fact(Skip = "Results holding TimeOnly values cannot be read (#29).")]
+    [Fact]
     public void ReadsNullableTimeOnlys()
     {
         TimeOnly time = Time;
@@ -211,7 +208,7 @@ public sealed record DateTimeResultTests : IClassFixture<QueryingFixture>, IDisp
         );
     }
 
-    [Fact(Skip = "Results holding TimeSpan values cannot be read (#29).")]
+    [Fact]
     public void ReadsNullableTimeSpans()
     {
         DateTime since = Since;
@@ -229,7 +226,7 @@ public sealed record DateTimeResultTests : IClassFixture<QueryingFixture>, IDisp
         );
     }
 
-    [Fact(Skip = "Results holding DateTime values cannot be read (#29).")]
+    [Fact]
     public void ReadsDateTimeScalars()
     {
         DateTime since = Since;
@@ -245,7 +242,7 @@ public sealed record DateTimeResultTests : IClassFixture<QueryingFixture>, IDisp
         AssertUnspecified([.. constants, .. computed]);
     }
 
-    [Fact(Skip = "Results holding DateOnly values cannot be read (#29).")]
+    [Fact]
     public void ReadsDateOnlyScalars()
     {
         DateOnly day = Day;
@@ -256,7 +253,7 @@ public sealed record DateTimeResultTests : IClassFixture<QueryingFixture>, IDisp
         );
     }
 
-    [Fact(Skip = "Results holding TimeOnly values cannot be read (#29).")]
+    [Fact]
     public void ReadsTimeOnlyScalars()
     {
         TimeOnly time = Time;
@@ -268,7 +265,7 @@ public sealed record DateTimeResultTests : IClassFixture<QueryingFixture>, IDisp
         );
     }
 
-    [Fact(Skip = "Results holding TimeSpan values cannot be read (#29).")]
+    [Fact]
     public void ReadsTimeSpanScalars()
     {
         DateTime since = Since;
@@ -281,7 +278,7 @@ public sealed record DateTimeResultTests : IClassFixture<QueryingFixture>, IDisp
         );
     }
 
-    [Fact(Skip = "Results holding DateTime values cannot be read (#29).")]
+    [Fact]
     public void ReadsTheMaximumOfDateTimes()
     {
         DateTime since = Since;
@@ -293,7 +290,7 @@ public sealed record DateTimeResultTests : IClassFixture<QueryingFixture>, IDisp
         AssertUnspecified([maximum]);
     }
 
-    [Fact(Skip = "Results holding DateOnly values cannot be read (#29).")]
+    [Fact]
     public void ReadsTheMaximumOfDateOnlys()
     {
         DateOnly day = Day;
@@ -303,7 +300,7 @@ public sealed record DateTimeResultTests : IClassFixture<QueryingFixture>, IDisp
         );
     }
 
-    [Fact(Skip = "Results holding TimeOnly values cannot be read (#29).")]
+    [Fact]
     public void ReadsTheMinimumOfTimeOnlys()
     {
         TimeOnly time = Time;
@@ -313,7 +310,7 @@ public sealed record DateTimeResultTests : IClassFixture<QueryingFixture>, IDisp
         );
     }
 
-    [Fact(Skip = "Results holding TimeSpan values cannot be read (#29).")]
+    [Fact]
     public void ReadsTheMaximumOfTimeSpans()
     {
         DateTime since = Since;
