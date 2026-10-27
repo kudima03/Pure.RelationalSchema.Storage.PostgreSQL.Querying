@@ -1,7 +1,8 @@
 using Pure.RelationalSchema.Abstractions.Column;
 using Pure.RelationalSchema.Storage.Abstractions;
 
-// The tests of results that cannot be read yet are skipped until they can.
+// The tests of the ...By operators the translator rejects are skipped until it
+// translates them.
 #pragma warning disable xUnit1004
 
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying.Tests;
@@ -11,47 +12,27 @@ namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying.Tests;
 /// be read as the elements of their source are, in one statement, and be what the
 /// same query returns over the enumerated rows in memory.
 /// </summary>
-public sealed record ByOperatorElementTests
-    : IClassFixture<QueryingFixture>,
-        IDisposable
+public sealed record ByOperatorElementTests : IClassFixture<QueryingFixture>, IDisposable
 {
-    private const string Pair = "System.ValueTuple`2[System.String,System.String]";
+    private const string ExceptByText =
+        "The translator rejects ExceptBy "
+        + "(kudima03/Linq.Expressions.Translation.PostgreSql#70).";
 
-    private const string Row = "Pure.RelationalSchema.Storage.Abstractions.IRow";
+    private const string IntersectByText =
+        "The translator rejects IntersectBy "
+        + "(kudima03/Linq.Expressions.Translation.PostgreSql#71).";
 
-    private const string DistinctByElement =
-        "The element of DistinctBy is not read (#30), and the translator rejects "
-        + "DistinctBy (kudima03/Linq.Expressions.Translation.PostgreSql#46).";
+    private const string UnionByText =
+        "The translator rejects UnionBy "
+        + "(kudima03/Linq.Expressions.Translation.PostgreSql#72).";
 
-    private const string DistinctByText =
-        "The translator rejects DistinctBy "
-        + "(kudima03/Linq.Expressions.Translation.PostgreSql#46).";
+    private const string MinByText =
+        "The translator rejects MinBy "
+        + "(kudima03/Linq.Expressions.Translation.PostgreSql#73).";
 
-    private const string ExceptByElement =
-        "The element of ExceptBy is not read (#30), and the translator rejects ExceptBy.";
-
-    private const string ExceptByText = "The translator rejects ExceptBy.";
-
-    private const string IntersectByElement =
-        "The element of IntersectBy is not read (#30), and the translator rejects "
-        + "IntersectBy.";
-
-    private const string IntersectByText = "The translator rejects IntersectBy.";
-
-    private const string UnionByElement =
-        "The element of UnionBy is not read (#30), and the translator rejects UnionBy.";
-
-    private const string UnionByText = "The translator rejects UnionBy.";
-
-    private const string MinByElement =
-        "The element of MinBy is not read (#30), and the translator rejects MinBy.";
-
-    private const string MinByText = "The translator rejects MinBy.";
-
-    private const string MaxByElement =
-        "The element of MaxBy is not read (#30), and the translator rejects MaxBy.";
-
-    private const string MaxByText = "The translator rejects MaxBy.";
+    private const string MaxByText =
+        "The translator rejects MaxBy "
+        + "(kudima03/Linq.Expressions.Translation.PostgreSql#74).";
 
     private readonly QueryingFixture _fixture;
 
@@ -70,7 +51,7 @@ public sealed record ByOperatorElementTests
     private IQueryable<IRow> Customers =>
         new PostgreSqlStoredSchemaDataSet(_fixture.Shop, _connection)[_fixture.Customers];
 
-    [Fact(Skip = DistinctByElement)]
+    [Fact]
     public void ReadsDistinctByOverAOneElementValueTuple()
     {
         AssertSequenceLikeInMemory(customers =>
@@ -80,7 +61,7 @@ public sealed record ByOperatorElementTests
         );
     }
 
-    [Fact(Skip = DistinctByElement)]
+    [Fact]
     public void ReadsDistinctByOverAValueTuple()
     {
         AssertSequenceLikeInMemory(customers =>
@@ -89,7 +70,7 @@ public sealed record ByOperatorElementTests
         );
     }
 
-    [Fact(Skip = DistinctByElement)]
+    [Fact]
     public void ReadsDistinctByOverAnAnonymousType()
     {
         AssertSequenceLikeInMemory(customers =>
@@ -104,7 +85,7 @@ public sealed record ByOperatorElementTests
         );
     }
 
-    [Fact(Skip = DistinctByElement)]
+    [Fact]
     public void ReadsDistinctByOverRows()
     {
         AssertSequenceLikeInMemory(customers =>
@@ -114,7 +95,7 @@ public sealed record ByOperatorElementTests
         );
     }
 
-    [Fact(Skip = ExceptByElement)]
+    [Fact(Skip = ExceptByText)]
     public void ReadsExceptByOverAValueTuple()
     {
         AssertSequenceLikeInMemory(customers =>
@@ -122,7 +103,7 @@ public sealed record ByOperatorElementTests
         );
     }
 
-    [Fact(Skip = ExceptByElement)]
+    [Fact(Skip = ExceptByText)]
     public void ReadsExceptByOverRows()
     {
         AssertSequenceLikeInMemory(customers =>
@@ -130,7 +111,7 @@ public sealed record ByOperatorElementTests
         );
     }
 
-    [Fact(Skip = IntersectByElement)]
+    [Fact(Skip = IntersectByText)]
     public void ReadsIntersectByOverAValueTuple()
     {
         AssertSequenceLikeInMemory(customers =>
@@ -138,27 +119,23 @@ public sealed record ByOperatorElementTests
         );
     }
 
-    [Fact(Skip = IntersectByElement)]
+    [Fact(Skip = IntersectByText)]
     public void ReadsIntersectByOverRows()
     {
         AssertSequenceLikeInMemory(customers =>
-            customers.IntersectBy(
-                Inactive(customers),
-                x => x.Cells[Name].Value.TextValue
-            )
+            customers.IntersectBy(Inactive(customers), x => x.Cells[Name].Value.TextValue)
         );
     }
 
-    [Fact(Skip = UnionByElement)]
+    [Fact(Skip = UnionByText)]
     public void ReadsUnionByOverAValueTuple()
     {
         AssertSequenceLikeInMemory(customers =>
-            Pairs(ActiveRows(customers))
-                .UnionBy(Pairs(Bob(customers)), x => x.Item1)
+            Pairs(ActiveRows(customers)).UnionBy(Pairs(Bob(customers)), x => x.Item1)
         );
     }
 
-    [Fact(Skip = UnionByElement)]
+    [Fact(Skip = UnionByText)]
     public void ReadsUnionByOverRows()
     {
         AssertSequenceLikeInMemory(customers =>
@@ -167,15 +144,13 @@ public sealed record ByOperatorElementTests
         );
     }
 
-    [Fact(Skip = MinByElement)]
+    [Fact(Skip = MinByText)]
     public void ReadsMinByOverAValueTuple()
     {
-        AssertElementLikeInMemory(customers =>
-            Pairs(customers).MinBy(x => x.Item1)
-        );
+        AssertElementLikeInMemory(customers => Pairs(customers).MinBy(x => x.Item1));
     }
 
-    [Fact(Skip = MinByElement)]
+    [Fact(Skip = MinByText)]
     public void ReadsMinByOverRows()
     {
         AssertElementLikeInMemory(customers =>
@@ -183,15 +158,13 @@ public sealed record ByOperatorElementTests
         );
     }
 
-    [Fact(Skip = MaxByElement)]
+    [Fact(Skip = MaxByText)]
     public void ReadsMaxByOverAValueTuple()
     {
-        AssertElementLikeInMemory(customers =>
-            Pairs(customers).MaxBy(x => x.Item1)
-        );
+        AssertElementLikeInMemory(customers => Pairs(customers).MaxBy(x => x.Item1));
     }
 
-    [Fact(Skip = MaxByElement)]
+    [Fact(Skip = MaxByText)]
     public void ReadsMaxByOverRows()
     {
         AssertElementLikeInMemory(customers =>
@@ -199,7 +172,7 @@ public sealed record ByOperatorElementTests
         );
     }
 
-    [Fact(Skip = DistinctByText)]
+    [Fact]
     public void ReadsDistinctByOverText()
     {
         AssertSequenceLikeInMemory(customers =>
@@ -245,82 +218,48 @@ public sealed record ByOperatorElementTests
     }
 
     [Fact]
-    public void RefusesTheElementOfDistinctByBeforeRunningAStatement()
-    {
-        AssertRefused(
-            () => Pairs(Customers).DistinctBy(x => x.Item2).ToArray(),
-            nameof(Queryable.DistinctBy),
-            Pair
-        );
-    }
-
-    [Fact]
-    public void RefusesTheRowsOfDistinctByBeforeRunningAStatement()
-    {
-        AssertRefused(
-            () => Customers.DistinctBy(x => x.Cells[Active].Value.TextValue).ToArray(),
-            nameof(Queryable.DistinctBy),
-            Row
-        );
-    }
-
-    [Fact]
-    public void RefusesTheElementOfExceptByBeforeRunningAStatement()
-    {
-        AssertRefused(
-            () => Pairs(Customers).ExceptBy(Inactive(Customers), x => x.Item1).ToArray(),
-            nameof(Queryable.ExceptBy),
-            Pair
-        );
-    }
-
-    [Fact]
-    public void RefusesTheElementOfIntersectByBeforeRunningAStatement()
-    {
-        AssertRefused(
-            () =>
-                Pairs(Customers).IntersectBy(Inactive(Customers), x => x.Item1).ToArray(),
-            nameof(Queryable.IntersectBy),
-            Pair
-        );
-    }
-
-    [Fact]
-    public void RefusesTheElementOfUnionByBeforeRunningAStatement()
-    {
-        AssertRefused(
-            () => Pairs(Customers).UnionBy(Pairs(Bob(Customers)), x => x.Item1).ToArray(),
-            nameof(Queryable.UnionBy),
-            Pair
-        );
-    }
-
-    [Fact]
-    public void RefusesTheElementOfMinByBeforeRunningAStatement()
-    {
-        AssertRefused(
-            () => Pairs(Customers).MinBy(x => x.Item1),
-            nameof(Queryable.MinBy),
-            Pair
-        );
-    }
-
-    [Fact]
-    public void RefusesTheRowOfMaxByBeforeRunningAStatement()
-    {
-        AssertRefused(
-            () => Customers.MaxBy(x => x.Cells[Name].Value.TextValue),
-            nameof(Queryable.MaxBy),
-            Row
-        );
-    }
-
-    [Fact]
-    public void TheTranslatorRejectsDistinctByOverText()
+    public void TheTranslatorRejectsExceptByOverAValueTuple()
     {
         AssertRejectedByTheTranslator(
-            () => Names(Customers).DistinctBy(x => x.Length).ToArray(),
-            nameof(Queryable.DistinctBy)
+            () => Pairs(Customers).ExceptBy(Inactive(Customers), x => x.Item1).ToArray(),
+            nameof(Queryable.ExceptBy)
+        );
+    }
+
+    [Fact]
+    public void TheTranslatorRejectsIntersectByOverAValueTuple()
+    {
+        AssertRejectedByTheTranslator(
+            () =>
+                Pairs(Customers).IntersectBy(Inactive(Customers), x => x.Item1).ToArray(),
+            nameof(Queryable.IntersectBy)
+        );
+    }
+
+    [Fact]
+    public void TheTranslatorRejectsUnionByOverAValueTuple()
+    {
+        AssertRejectedByTheTranslator(
+            () => Pairs(Customers).UnionBy(Pairs(Bob(Customers)), x => x.Item1).ToArray(),
+            nameof(Queryable.UnionBy)
+        );
+    }
+
+    [Fact]
+    public void TheTranslatorRejectsMinByOverAValueTuple()
+    {
+        AssertRejectedByTheTranslator(
+            () => Pairs(Customers).MinBy(x => x.Item1),
+            nameof(Queryable.MinBy)
+        );
+    }
+
+    [Fact]
+    public void TheTranslatorRejectsMaxByOverRows()
+    {
+        AssertRejectedByTheTranslator(
+            () => Customers.MaxBy(x => x.Cells[Name].Value.TextValue),
+            nameof(Queryable.MaxBy)
         );
     }
 
@@ -419,18 +358,6 @@ public sealed record ByOperatorElementTests
         _ = Assert.Single(_connection.Statements);
     }
 
-    private void AssertRefused(Func<object?> query, string name, string type)
-    {
-        NotSupportedException exception = Assert.Throws<NotSupportedException>(query);
-
-        Assert.Equal(
-            $"The query operator {name} returns {type}, which cannot be read from a "
-                + "SQL result.",
-            exception.Message
-        );
-        Assert.Empty(_connection.Statements);
-    }
-
     private void AssertRejectedByTheTranslator(Func<object?> query, string name)
     {
         NotSupportedException exception = Assert.Throws<NotSupportedException>(query);
@@ -449,13 +376,12 @@ public sealed record ByOperatorElementTests
 
     private IQueryable<IRow> InMemory()
     {
-        return new EnumerableQuery<IRow>(
-            [
-                .. new PostgreSqlStoredSchemaDataSet(_fixture.Shop, _fixture.Connection)[
-                    _fixture.Customers
-                ].AsEnumerable(),
+        return new EnumerableQuery<IRow>([
+            .. new PostgreSqlStoredSchemaDataSet(_fixture.Shop, _fixture.Connection)[
+                _fixture.Customers
             ]
-        );
+                .AsEnumerable(),
+        ]);
     }
 
     private string[] Texts<T>(IEnumerable<T> values)

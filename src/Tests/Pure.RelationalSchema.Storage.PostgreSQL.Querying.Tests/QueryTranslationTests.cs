@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Linq.Expressions;
+using Pure.Primitives.Abstractions.String;
 using Pure.Primitives.String;
 using Pure.RelationalSchema.Abstractions.Column;
 using Pure.RelationalSchema.Storage.Abstractions;
@@ -575,8 +576,9 @@ public sealed record QueryTranslationTests : IClassFixture<QueryingFixture>, IDi
                     [typeof(IRow)],
                     ordered.Expression
                 )
-            )
-, exactMatch: false);
+            ),
+            exactMatch: false
+        );
         Assert.Equal(3, Count((IEnumerable)provider.Execute(names.Expression)!));
         Assert.Equal(3, Count(provider.CreateQuery(names.Expression)));
         Assert.Equal(3, provider.Execute<IEnumerable<IRow>>(ordered.Expression).Count());
@@ -584,9 +586,11 @@ public sealed record QueryTranslationTests : IClassFixture<QueryingFixture>, IDi
         Assert.Equal(
             "The sequence of System.String returned by the query operator Select is "
                 + "read by enumerating the query.",
-            Assert.Throws<NotSupportedException>(() =>
-                provider.Execute<IEnumerable<string>>(names.Expression)
-            ).Message
+            Assert
+                .Throws<NotSupportedException>(() =>
+                    provider.Execute<IEnumerable<string>>(names.Expression)
+                )
+                .Message
         );
     }
 
@@ -721,7 +725,8 @@ public sealed record QueryTranslationTests : IClassFixture<QueryingFixture>, IDi
     public void ThrowsWhenAnOperatorCannotBeTranslated()
     {
         NotSupportedException exception = Assert.Throws<NotSupportedException>(() =>
-            Customers.Select(x => Shout(x.Cells[_fixture.CustomerName].Value.TextValue))
+            Customers
+                .Select(x => Shout(x.Cells[_fixture.CustomerName].Value.TextValue))
                 .ToArray()
         );
 
@@ -753,6 +758,47 @@ public sealed record QueryTranslationTests : IClassFixture<QueryingFixture>, IDi
         );
         Assert.Empty(_connection.Statements);
         Assert.Empty(other.Statements);
+    }
+
+    [Fact]
+    public void InlinesCapturedQueriesBuiltWithLambdas()
+    {
+        IQueryable<IRow> orders = Orders;
+
+        string[] names =
+        [
+            .. Customers
+                .Where(x =>
+                    new
+                    {
+                        Big = orders.Where(o =>
+                            o.Cells[_fixture.OrderTotal].Value.TextValue == "250"
+                        ),
+                    }.Big.Any(o =>
+                        o.Cells[_fixture.OrderCustomer].Value.TextValue
+                        == x.Cells[_fixture.CustomerId].Value.TextValue
+                    )
+                )
+                .Select(x => x.Cells[_fixture.CustomerName].Value.TextValue),
+        ];
+
+        Assert.Equal(["Ann"], names);
+        Assert.Contains("EXISTS", Assert.Single(_connection.Statements));
+    }
+
+    [Fact]
+    public void EnumeratesATypedQueryWithoutItsType()
+    {
+        IQueryable<string> names = Customers
+            .OrderBy(x => x.Cells[_fixture.CustomerName].Value.TextValue)
+            .Select(x => x.Cells[_fixture.CustomerName].Value.TextValue);
+        IEnumerable sequence = names;
+
+        Assert.Equal(typeof(string), names.ElementType);
+        IEnumerator values = sequence.GetEnumerator();
+        Assert.True(values.MoveNext());
+        Assert.Equal("Ann", values.Current);
+        _ = Assert.Single(_connection.Statements);
     }
 
     [Fact]
@@ -793,6 +839,68 @@ public sealed record QueryTranslationTests : IClassFixture<QueryingFixture>, IDi
     }
 
     [Fact]
+    public void ThrowsWhenAnArgumentOfAConstructedResultCannotBeRead()
+    {
+        NotSupportedException exception = Assert.Throws<NotSupportedException>(() =>
+            Customers
+                .Select(x => new ValueTuple<string, IString>(
+                    x.Cells[_fixture.CustomerName].Value.TextValue,
+                    x.Cells[_fixture.CustomerName].Value
+                ))
+                .ToArray()
+        );
+
+        Assert.StartsWith(
+            "The query operator Select returns System.ValueTuple`2[System.String,",
+            exception.Message,
+            StringComparison.Ordinal
+        );
+        Assert.EndsWith(
+            "IString], which cannot be read from a SQL result.",
+            exception.Message,
+            StringComparison.Ordinal
+        );
+        Assert.Empty(_connection.Statements);
+    }
+
+    [Fact]
+    public void ThrowsWhenTheStatementReturnsMoreColumnsThanTheResultHolds()
+    {
+        using RecordingConnection widening = new(
+            _fixture.Connection,
+            sql => $"SELECT *, 1 FROM ({sql}) AS widened"
+        );
+        IQueryable<IRow> customers = new PostgreSqlStoredSchemaDataSet(
+            _fixture.Shop,
+            widening
+        )[_fixture.Customers];
+
+        NotSupportedException exception = Assert.Throws<NotSupportedException>(() =>
+            customers
+                .Select(x => x.Cells[_fixture.CustomerName].Value.TextValue)
+                .ToArray()
+        );
+
+        Assert.Equal(
+            "The SQL of the query operator Select returns 2 columns where 1 are "
+                + "expected.",
+            exception.Message
+        );
+        _ = Assert.Single(widening.Statements);
+    }
+
+    [Fact]
+    public void ConvertsANullableAggregateToItsType()
+    {
+        long? total = Customers.Sum(x =>
+            (long?)x.Cells[_fixture.CustomerName].Value.TextValue.Length
+        );
+
+        Assert.Equal(9, total);
+        Assert.Contains("SUM(", Assert.Single(_connection.Statements));
+    }
+
+    [Fact]
     public void ThrowsWhenRowsHoldQueries()
     {
         IQueryable<IRow> orders = Orders;
@@ -819,9 +927,11 @@ public sealed record QueryTranslationTests : IClassFixture<QueryingFixture>, IDi
         Assert.Equal(
             "The query is not a query operator over stored tables, so it cannot be "
                 + "translated to SQL.",
-            Assert.Throws<NotSupportedException>(() =>
-                Customers.Provider.Execute(Expression.Constant(3))
-            ).Message
+            Assert
+                .Throws<NotSupportedException>(() =>
+                    Customers.Provider.Execute(Expression.Constant(3))
+                )
+                .Message
         );
     }
 

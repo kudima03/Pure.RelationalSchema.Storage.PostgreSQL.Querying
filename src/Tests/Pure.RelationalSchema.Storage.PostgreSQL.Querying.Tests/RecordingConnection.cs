@@ -3,9 +3,18 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying.Tests;
 
-internal sealed class RecordingConnection(IDbConnection connection) : IDbConnection
+/// <summary>
+/// A connection that records the statements run through it, each rewritten by the
+/// optional rewriting before it runs.
+/// </summary>
+internal sealed class RecordingConnection(
+    IDbConnection connection,
+    Func<string, string>? rewriting = null
+) : IDbConnection
 {
     private readonly IDbConnection _connection = connection;
+
+    private readonly Func<string, string> _rewriting = rewriting ?? (x => x);
 
     private readonly List<string> _statements = [];
 
@@ -46,7 +55,7 @@ internal sealed class RecordingConnection(IDbConnection connection) : IDbConnect
 
     public IDbCommand CreateCommand()
     {
-        return new RecordingCommand(_connection.CreateCommand(), _statements);
+        return new RecordingCommand(_connection.CreateCommand(), _statements, _rewriting);
     }
 
     public void Open()
@@ -56,12 +65,17 @@ internal sealed class RecordingConnection(IDbConnection connection) : IDbConnect
 
     public void Dispose() { }
 
-    private sealed class RecordingCommand(IDbCommand command, List<string> statements)
-        : IDbCommand
+    private sealed class RecordingCommand(
+        IDbCommand command,
+        List<string> statements,
+        Func<string, string> rewriting
+    ) : IDbCommand
     {
         private readonly IDbCommand _command = command;
 
         private readonly List<string> _statements = statements;
+
+        private readonly Func<string, string> _rewriting = rewriting;
 
         [AllowNull]
         public string CommandText
@@ -115,24 +129,28 @@ internal sealed class RecordingConnection(IDbConnection connection) : IDbConnect
         public int ExecuteNonQuery()
         {
             _statements.Add(CommandText);
+            _command.CommandText = _rewriting(CommandText);
             return _command.ExecuteNonQuery();
         }
 
         public IDataReader ExecuteReader()
         {
             _statements.Add(CommandText);
+            _command.CommandText = _rewriting(CommandText);
             return _command.ExecuteReader();
         }
 
         public IDataReader ExecuteReader(CommandBehavior behavior)
         {
             _statements.Add(CommandText);
+            _command.CommandText = _rewriting(CommandText);
             return _command.ExecuteReader(behavior);
         }
 
         public object? ExecuteScalar()
         {
             _statements.Add(CommandText);
+            _command.CommandText = _rewriting(CommandText);
             return _command.ExecuteScalar();
         }
 

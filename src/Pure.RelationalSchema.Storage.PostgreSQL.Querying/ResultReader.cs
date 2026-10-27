@@ -26,6 +26,10 @@ internal sealed record ResultReader : IResultReader
         typeof(decimal),
         typeof(string),
         typeof(Guid),
+        typeof(DateTime),
+        typeof(DateOnly),
+        typeof(TimeOnly),
+        typeof(TimeSpan),
     ];
 
     private readonly IResultReader? _reader;

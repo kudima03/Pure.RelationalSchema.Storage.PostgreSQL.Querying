@@ -14,9 +14,9 @@ using Schema = Schema.Schema;
 using Table = Table.Table;
 
 /// <summary>
-/// A table with a column of every type whose cells the translation does not read
-/// yet: <c>date</c>, <c>time</c>, <c>double</c>, <c>float</c> and
-/// <c>determined_hash</c>.
+/// A table with a column of each of the types <c>date</c>, <c>time</c>,
+/// <c>double</c>, <c>float</c> and <c>determined_hash</c>, holding values whose
+/// text PostgreSQL writes differently from .NET.
 /// </summary>
 public sealed record ColumnTypeFixture : IDisposable
 {
@@ -57,14 +57,7 @@ public sealed record ColumnTypeFixture : IDisposable
             Connection,
             Lab,
             Readings,
-            [
-                "1",
-                "'2024-02-29'",
-                "'03:04:05'",
-                "0.1",
-                "0.1",
-                "decode('616263', 'hex')",
-            ],
+            ["1", "'2024-02-29'", "'03:04:05'", "0.1", "0.1", "decode('616263', 'hex')"],
             [
                 "2",
                 "'0999-12-31'",
@@ -80,6 +73,24 @@ public sealed record ColumnTypeFixture : IDisposable
                 "-2.5",
                 "1e-7",
                 "decode('313233', 'hex')",
+            ],
+            ["4", "'2000-02-29'", "'12:30:00'", "1e15", "1e6", "decode('c3a9', 'hex')"],
+            ["5", "'1999-12-31'", "'09:08:07'", "1e17", "1e9", "decode('20', 'hex')"],
+            [
+                "6",
+                "'2024-01-01'",
+                "'23:00:00'",
+                "-5e16",
+                "-2.5e8",
+                "decode('e29c93', 'hex')",
+            ],
+            [
+                "7",
+                "'0001-01-01'",
+                "'10:00:00'",
+                "1234567890123456.8",
+                "1234567.9",
+                "decode('e282ac', 'hex')",
             ]
         );
     }
