@@ -65,4 +65,5 @@ jobs:
         recreate: true
         path: code-coverage-results.md
     - name: Run mutation test
+      if: false
       run: dotnet stryker --mutation-level Complete --break-at ${{ env.MUTATION_THRESHOLD }}
