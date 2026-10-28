@@ -46,6 +46,14 @@ internal sealed record ColumnProperty
 
     private static readonly ConstantExpression Empty = Expression.Constant(string.Empty);
 
+    private static readonly Dictionary<Type, Type> Numbers = new()
+    {
+        [typeof(int)] = typeof(int?),
+        [typeof(long)] = typeof(long?),
+        [typeof(decimal)] = typeof(decimal?),
+        [typeof(double)] = typeof(double?),
+    };
+
     private readonly IColumn _column;
 
     public ColumnProperty(IColumn column)
@@ -82,6 +90,39 @@ internal sealed record ColumnProperty
         };
 
     private string TypeName => _column.Type.Name.TextValue;
+
+    /// <summary>
+    /// The value of the column read as the type its cell text is parsed to: the
+    /// property itself for a nullable read, or its value (see <see cref="Value"/>,
+    /// never NULL to the translator) converted to the parsed type for a bare one;
+    /// null when the type is not the column's or a wider number. A <c>double</c> or
+    /// <c>float</c> column is not read so: the text PostgreSQL writes for it is the
+    /// shortest that reads back, which a numeric cast does not give, and a text
+    /// column has no parse.
+    /// </summary>
+    public Expression? Typed(Expression property, Type parsed, bool nullable)
+    {
+        Type? column = Nullable.GetUnderlyingType(Type);
+        if (
+            column is null
+            || TypeName is "double" or "float"
+            || !(
+                column == parsed
+                || (Numbers.ContainsKey(column) && Numbers.ContainsKey(parsed))
+            )
+        )
+        {
+            return null;
+        }
+        if (nullable)
+        {
+            return column == parsed
+                ? property
+                : Expression.Convert(property, Numbers[parsed]);
+        }
+        UnaryExpression value = Value(property);
+        return column == parsed ? value : Expression.Convert(value, parsed);
+    }
 
     /// <summary>
     /// The cell text of the column, as the rows read it, built from the property
