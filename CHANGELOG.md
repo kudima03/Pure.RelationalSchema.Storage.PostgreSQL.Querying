@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-preview.0.8.2] - 2026-10-28
+
+### Changed
+
+- Updated the `Linq.Expressions.Translation.PostgreSql` dependency from 0.1.0-preview.0.6.1 to 0.1.0-preview.0.6.2. An operand that throws when it is evaluated (a division by a captured zero, ...) in a branch of a conditional or on the right of `??`, `&&` or `||` no longer fails the translation, as LINQ to Objects evaluates it only for a row that reaches it. `DateOnly.Parse` and `DateTime.Parse` with the invariant culture read a numeric date month first, whatever the server's `DateStyle`.
+
 ## [0.1.0-preview.0.8.1] - 2026-10-28
 
 ### Changed
