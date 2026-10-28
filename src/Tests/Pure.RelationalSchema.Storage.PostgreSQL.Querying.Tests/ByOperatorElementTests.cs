@@ -1,10 +1,6 @@
 using Pure.RelationalSchema.Abstractions.Column;
 using Pure.RelationalSchema.Storage.Abstractions;
 
-// The tests of the ...By operators the translator rejects are skipped until it
-// translates them.
-#pragma warning disable xUnit1004
-
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying.Tests;
 
 /// <summary>
@@ -14,26 +10,6 @@ namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying.Tests;
 /// </summary>
 public sealed record ByOperatorElementTests : IClassFixture<QueryingFixture>, IDisposable
 {
-    private const string ExceptByText =
-        "The translator rejects ExceptBy "
-        + "(kudima03/Linq.Expressions.Translation.PostgreSql#70).";
-
-    private const string IntersectByText =
-        "The translator rejects IntersectBy "
-        + "(kudima03/Linq.Expressions.Translation.PostgreSql#71).";
-
-    private const string UnionByText =
-        "The translator rejects UnionBy "
-        + "(kudima03/Linq.Expressions.Translation.PostgreSql#72).";
-
-    private const string MinByText =
-        "The translator rejects MinBy "
-        + "(kudima03/Linq.Expressions.Translation.PostgreSql#73).";
-
-    private const string MaxByText =
-        "The translator rejects MaxBy "
-        + "(kudima03/Linq.Expressions.Translation.PostgreSql#74).";
-
     private readonly QueryingFixture _fixture;
 
     private readonly RecordingConnection _connection;
@@ -95,7 +71,7 @@ public sealed record ByOperatorElementTests : IClassFixture<QueryingFixture>, ID
         );
     }
 
-    [Fact(Skip = ExceptByText)]
+    [Fact]
     public void ReadsExceptByOverAValueTuple()
     {
         AssertSequenceLikeInMemory(customers =>
@@ -103,7 +79,7 @@ public sealed record ByOperatorElementTests : IClassFixture<QueryingFixture>, ID
         );
     }
 
-    [Fact(Skip = ExceptByText)]
+    [Fact]
     public void ReadsExceptByOverRows()
     {
         AssertSequenceLikeInMemory(customers =>
@@ -111,7 +87,7 @@ public sealed record ByOperatorElementTests : IClassFixture<QueryingFixture>, ID
         );
     }
 
-    [Fact(Skip = IntersectByText)]
+    [Fact]
     public void ReadsIntersectByOverAValueTuple()
     {
         AssertSequenceLikeInMemory(customers =>
@@ -119,7 +95,7 @@ public sealed record ByOperatorElementTests : IClassFixture<QueryingFixture>, ID
         );
     }
 
-    [Fact(Skip = IntersectByText)]
+    [Fact]
     public void ReadsIntersectByOverRows()
     {
         AssertSequenceLikeInMemory(customers =>
@@ -127,7 +103,7 @@ public sealed record ByOperatorElementTests : IClassFixture<QueryingFixture>, ID
         );
     }
 
-    [Fact(Skip = UnionByText)]
+    [Fact]
     public void ReadsUnionByOverAValueTuple()
     {
         AssertSequenceLikeInMemory(customers =>
@@ -135,7 +111,7 @@ public sealed record ByOperatorElementTests : IClassFixture<QueryingFixture>, ID
         );
     }
 
-    [Fact(Skip = UnionByText)]
+    [Fact]
     public void ReadsUnionByOverRows()
     {
         AssertSequenceLikeInMemory(customers =>
@@ -144,13 +120,13 @@ public sealed record ByOperatorElementTests : IClassFixture<QueryingFixture>, ID
         );
     }
 
-    [Fact(Skip = MinByText)]
+    [Fact]
     public void ReadsMinByOverAValueTuple()
     {
         AssertElementLikeInMemory(customers => Pairs(customers).MinBy(x => x.Item1));
     }
 
-    [Fact(Skip = MinByText)]
+    [Fact]
     public void ReadsMinByOverRows()
     {
         AssertElementLikeInMemory(customers =>
@@ -158,13 +134,13 @@ public sealed record ByOperatorElementTests : IClassFixture<QueryingFixture>, ID
         );
     }
 
-    [Fact(Skip = MaxByText)]
+    [Fact]
     public void ReadsMaxByOverAValueTuple()
     {
         AssertElementLikeInMemory(customers => Pairs(customers).MaxBy(x => x.Item1));
     }
 
-    [Fact(Skip = MaxByText)]
+    [Fact]
     public void ReadsMaxByOverRows()
     {
         AssertElementLikeInMemory(customers =>
@@ -181,7 +157,7 @@ public sealed record ByOperatorElementTests : IClassFixture<QueryingFixture>, ID
         );
     }
 
-    [Fact(Skip = ExceptByText)]
+    [Fact]
     public void ReadsExceptByOverText()
     {
         AssertSequenceLikeInMemory(customers =>
@@ -189,7 +165,7 @@ public sealed record ByOperatorElementTests : IClassFixture<QueryingFixture>, ID
         );
     }
 
-    [Fact(Skip = IntersectByText)]
+    [Fact]
     public void ReadsIntersectByOverText()
     {
         AssertSequenceLikeInMemory(customers =>
@@ -197,7 +173,7 @@ public sealed record ByOperatorElementTests : IClassFixture<QueryingFixture>, ID
         );
     }
 
-    [Fact(Skip = UnionByText)]
+    [Fact]
     public void ReadsUnionByOverText()
     {
         AssertSequenceLikeInMemory(customers =>
@@ -205,107 +181,16 @@ public sealed record ByOperatorElementTests : IClassFixture<QueryingFixture>, ID
         );
     }
 
-    [Fact(Skip = MinByText)]
+    [Fact]
     public void ReadsMinByOverText()
     {
         AssertElementLikeInMemory(customers => Names(customers).MinBy(x => x));
     }
 
-    [Fact(Skip = MaxByText)]
+    [Fact]
     public void ReadsMaxByOverText()
     {
         AssertElementLikeInMemory(customers => Names(customers).MaxBy(x => x));
-    }
-
-    [Fact]
-    public void TheTranslatorRejectsExceptByOverAValueTuple()
-    {
-        AssertRejectedByTheTranslator(
-            () => Pairs(Customers).ExceptBy(Inactive(Customers), x => x.Item1).ToArray(),
-            nameof(Queryable.ExceptBy)
-        );
-    }
-
-    [Fact]
-    public void TheTranslatorRejectsIntersectByOverAValueTuple()
-    {
-        AssertRejectedByTheTranslator(
-            () =>
-                Pairs(Customers).IntersectBy(Inactive(Customers), x => x.Item1).ToArray(),
-            nameof(Queryable.IntersectBy)
-        );
-    }
-
-    [Fact]
-    public void TheTranslatorRejectsUnionByOverAValueTuple()
-    {
-        AssertRejectedByTheTranslator(
-            () => Pairs(Customers).UnionBy(Pairs(Bob(Customers)), x => x.Item1).ToArray(),
-            nameof(Queryable.UnionBy)
-        );
-    }
-
-    [Fact]
-    public void TheTranslatorRejectsMinByOverAValueTuple()
-    {
-        AssertRejectedByTheTranslator(
-            () => Pairs(Customers).MinBy(x => x.Item1),
-            nameof(Queryable.MinBy)
-        );
-    }
-
-    [Fact]
-    public void TheTranslatorRejectsMaxByOverRows()
-    {
-        AssertRejectedByTheTranslator(
-            () => Customers.MaxBy(x => x.Cells[Name].Value.TextValue),
-            nameof(Queryable.MaxBy)
-        );
-    }
-
-    [Fact]
-    public void TheTranslatorRejectsExceptByOverText()
-    {
-        AssertRejectedByTheTranslator(
-            () => Names(Customers).ExceptBy(Inactive(Customers), x => x).ToArray(),
-            nameof(Queryable.ExceptBy)
-        );
-    }
-
-    [Fact]
-    public void TheTranslatorRejectsIntersectByOverText()
-    {
-        AssertRejectedByTheTranslator(
-            () => Names(Customers).IntersectBy(Inactive(Customers), x => x).ToArray(),
-            nameof(Queryable.IntersectBy)
-        );
-    }
-
-    [Fact]
-    public void TheTranslatorRejectsUnionByOverText()
-    {
-        AssertRejectedByTheTranslator(
-            () => Names(Customers).UnionBy(Names(Bob(Customers)), x => x).ToArray(),
-            nameof(Queryable.UnionBy)
-        );
-    }
-
-    [Fact]
-    public void TheTranslatorRejectsMinByOverText()
-    {
-        AssertRejectedByTheTranslator(
-            () => Names(Customers).MinBy(x => x),
-            nameof(Queryable.MinBy)
-        );
-    }
-
-    [Fact]
-    public void TheTranslatorRejectsMaxByOverText()
-    {
-        AssertRejectedByTheTranslator(
-            () => Names(Customers).MaxBy(x => x),
-            nameof(Queryable.MaxBy)
-        );
     }
 
     private IQueryable<(string, string)> Pairs(IQueryable<IRow> customers)
@@ -356,22 +241,6 @@ public sealed record ByOperatorElementTests : IClassFixture<QueryingFixture>, ID
 
         Assert.Equal(expected, actual);
         _ = Assert.Single(_connection.Statements);
-    }
-
-    private void AssertRejectedByTheTranslator(Func<object?> query, string name)
-    {
-        NotSupportedException exception = Assert.Throws<NotSupportedException>(query);
-
-        Assert.Equal(
-            $"The query operator {name} cannot be translated to SQL.",
-            exception.Message
-        );
-        Assert.Contains(
-            $"'Queryable.{name}'",
-            Assert.IsType<NotSupportedException>(exception.InnerException).Message,
-            StringComparison.Ordinal
-        );
-        Assert.Empty(_connection.Statements);
     }
 
     private IQueryable<IRow> InMemory()
