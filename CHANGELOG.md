@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-preview.0.8.1] - 2026-10-28
+
+### Changed
+
+- Updated the `Linq.Expressions.Translation.PostgreSql` dependency from 0.1.0-preview.0.6.0 to 0.1.0-preview.0.6.1, which fixes the translation of left joins (`GroupJoin`, or `SelectMany` with `DefaultIfEmpty()`): an outer row without a match reads the default element, as LINQ to Objects yields it. It also makes a constant column of `Concat`/`Union`/`Intersect`/`Except` nullable when the other side's column is.
+
 ## [0.1.0-preview.0.8.0] - 2026-10-28
 
 ### Added
