@@ -41,7 +41,7 @@ This is the **querying (read)** part of the PostgreSQL storage implementation fo
 
 **Formatting:** `dotnet format` formats every project of the solution, and with multi-targeting it can leave `<<<<<<< TODO: Unmerged change` conflict blocks in a file when a fix differs per target; check for them after a run.
 
-**Package validation:** `EnablePackageValidation = true`, with `PackageValidationBaselineVersion` currently `0.1.0-preview.0.8.2`. The test project sees the internal types through `InternalsVisibleTo`. Breaking API changes against the baseline fail the build.
+**Package validation:** `EnablePackageValidation = true`, with `PackageValidationBaselineVersion` currently `0.1.0-preview.0.8.3`. The test project sees the internal types through `InternalsVisibleTo`. Breaking API changes against the baseline fail the build.
 
 **Publishing:** triggered by pushing a semver tag matching `*.*.*`. The tag name becomes the `PackageVersion`. Packages are published to both GitHub Packages and NuGet.org.
 
