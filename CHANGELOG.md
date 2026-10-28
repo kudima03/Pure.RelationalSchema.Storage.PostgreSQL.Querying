@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- A cell parsed to its type is read as the column itself. `T.Parse(row.Cells[column].Value.TextValue, ...)` with `T` the column's type or a wider number (`bool`, `int`, `long`, `decimal`, `double`, `Guid`, `DateOnly`, `TimeOnly`, `DateTime`; with the invariant culture, any number styles and date styles that assume no local time) is the column, never NULL to the translator, so a join or filter on it compares the column with `=` (a hash or merge join, and the planner's statistics and indexes) instead of parsing the text PostgreSQL composed from it for every row; `string.IsNullOrEmpty(text) ? null : (T?)T.Parse(text)` is the nullable column, and `string.IsNullOrEmpty(text)` of such a column is its test for NULL. A `double`, `float`, `string` or `determined_hash` column is still read as text. A `datetime` or `time` column read so has its whole precision, where its cell text keeps seconds or minutes only, and an empty cell parsed bare is NULL, where the parse of the empty text fails in memory.
+
+### Changed
+
+- Updated the `Linq.Expressions.Translation.PostgreSql` dependency from 0.1.0-preview.0.6.3 to 0.1.0-preview.0.7.0: an aggregate over the rows a projection reads is a window aggregate (`COUNT(*) OVER ()`, ...) computed in the pass that reads the rows instead of a scalar subquery that reads the sources again, and a nullable value read as its value (`Nullable<T>.Value`, a cast) compares with `=`.
+
 ## [0.1.0-preview.0.8.2] - 2026-10-28
 
 ### Changed
