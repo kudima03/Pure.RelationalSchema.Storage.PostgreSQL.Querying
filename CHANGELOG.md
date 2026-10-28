@@ -15,6 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Updated the `Linq.Expressions.Translation.PostgreSql` dependency from 0.1.0-preview.0.6.3 to 0.1.0-preview.0.7.0: an aggregate over the rows a projection reads is a window aggregate (`COUNT(*) OVER ()`, ...) computed in the pass that reads the rows instead of a scalar subquery that reads the sources again, and a nullable value read as its value (`Nullable<T>.Value`, a cast) compares with `=`.
 
+## [0.1.0-preview.0.8.3] - 2026-10-28
+
+### Changed
+
+- Updated the `Linq.Expressions.Translation.PostgreSql` dependency from 0.1.0-preview.0.6.2 to 0.1.0-preview.0.6.3. `DateOnly.Parse` and `DateTime.Parse` with the invariant culture read the text with `TO_DATE`/`TO_TIMESTAMP` and an explicit month-first format instead of a `REGEXP_REPLACE` per value, which made a date range join over a few thousand rows a side take minutes instead of seconds. ISO 8601 text and month names, previously left to the server's `DateStyle`, now fail on the server, and a two-digit year is read as the year itself.
+
 ## [0.1.0-preview.0.8.2] - 2026-10-28
 
 ### Changed
