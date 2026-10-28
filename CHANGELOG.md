@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-preview.0.8.0] - 2026-10-28
+
+### Added
+
+- `ExceptBy`, `IntersectBy`, `UnionBy`, `MinBy` and `MaxBy` are translated to one SQL statement instead of throwing `NotSupportedException`.
+
+### Changed
+
+- Updated the `Linq.Expressions.Translation.PostgreSql` dependency from 0.1.0-preview.0.5.1 to 0.1.0-preview.0.6.0.
+
 ## [0.1.0-preview.0.7.0] - 2026-10-27
 
 ### Added
