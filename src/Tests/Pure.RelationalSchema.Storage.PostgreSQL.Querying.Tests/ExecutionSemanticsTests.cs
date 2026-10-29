@@ -872,6 +872,104 @@ public sealed record ExecutionSemanticsTests : IClassFixture<ExecutionFixture>
         });
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void FiltersAndProjectsRowsByManySubqueries(bool nullCells)
+    {
+        AssertLikeEnumeration(db =>
+        {
+            IQueryable<IRow> children = Rows(db.Children, ChildId, nullCells);
+            IQueryable<IRow> entries = Rows(db.Entries, EntryId, nullCells);
+            IQueryable<string> keys = children
+                .Where(x => x.Cells[ChildNumber].Value.TextValue == "1")
+                .Select(x => x.Cells[ChildKey].Value.TextValue);
+            return Rows(db.Parents, ParentId, nullCells)
+                .Where(parent =>
+                    children.Any(child =>
+                        child.Cells[ChildKey].Value.TextValue
+                        == parent.Cells[ParentKey].Value.TextValue
+                    )
+                    || entries.Any(entry =>
+                        entry.Cells[EntryKey].Value.TextValue
+                        == parent.Cells[ParentKey].Value.TextValue
+                    )
+                )
+                .Select(parent => new
+                {
+                    Id = parent.Cells[ParentId].Value.TextValue,
+                    Children = children.Count(child =>
+                        child.Cells[ChildKey].Value.TextValue
+                        == parent.Cells[ParentKey].Value.TextValue
+                    ),
+                    Label = children
+                        .Where(child =>
+                            child.Cells[ChildKey].Value.TextValue
+                            == parent.Cells[ParentKey].Value.TextValue
+                        )
+                        .Max(child => child.Cells[ChildLabel].Value.TextValue),
+                    SameNumbers = children
+                        .Where(child =>
+                            child.Cells[ChildKey].Value.TextValue
+                            == parent.Cells[ParentKey].Value.TextValue
+                        )
+                        .All(child =>
+                            child.Cells[ChildNumber].Value.TextValue
+                            == parent.Cells[ParentNumber].Value.TextValue
+                        ),
+                    Entries = entries.LongCount(entry =>
+                        entry.Cells[EntryKey].Value.TextValue
+                        == parent.Cells[ParentKey].Value.TextValue
+                    ),
+                    Amounts = entries
+                        .Where(entry =>
+                            entry.Cells[EntryKey].Value.TextValue
+                            == parent.Cells[ParentKey].Value.TextValue
+                        )
+                        .Sum(entry => entry.Cells[EntryAmount].Value.TextValue.Length),
+                    Keyed = keys.Contains(parent.Cells[ParentKey].Value.TextValue),
+                    Larger = entries.Any(entry =>
+                        entry.Cells[EntryAmount].Value.TextValue.Length
+                        > children.Count(child =>
+                            child.Cells[ChildKey].Value.TextValue
+                            == parent.Cells[ParentKey].Value.TextValue
+                        )
+                    ),
+                });
+        });
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void FiltersRowsBySubqueriesNestedThreeDeep(bool nullCells)
+    {
+        AssertLikeEnumeration(db =>
+        {
+            IQueryable<IRow> parents = Rows(db.Parents, ParentId, nullCells);
+            IQueryable<IRow> children = Rows(db.Children, ChildId, nullCells);
+            IQueryable<IRow> entries = Rows(db.Entries, EntryId, nullCells);
+            return parents
+                .Where(parent =>
+                    children.Any(child =>
+                        child.Cells[ChildKey].Value.TextValue
+                            == parent.Cells[ParentKey].Value.TextValue
+                        && entries.Any(entry =>
+                            entry.Cells[EntryKey].Value.TextValue
+                                == child.Cells[ChildKey].Value.TextValue
+                            && parents.Any(other =>
+                                other.Cells[ParentNumber].Value.TextValue
+                                    == child.Cells[ChildNumber].Value.TextValue
+                                && other.Cells[ParentId].Value.TextValue
+                                    != parent.Cells[ParentId].Value.TextValue
+                            )
+                        )
+                    )
+                )
+                .Select(x => x.Cells[ParentId].Value.TextValue);
+        });
+    }
+
     [Fact]
     public void ConcatenatesRowsOfTheTable()
     {
