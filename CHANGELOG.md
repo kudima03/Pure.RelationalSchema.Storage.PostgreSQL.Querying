@@ -5,6 +5,12 @@ All notable changes to `Pure.RelationalSchema.Storage.PostgreSQL.Querying` are d
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-preview.0.9.1] - 2026-11-02
+
+### Changed
+
+- Updated the `Linq.Expressions.Translation.PostgreSql` dependency from 0.1.0-preview.0.7.0 to 0.1.0-preview.0.7.1. A one-row root of aggregates joined on either side of `SelectMany`, `Join` or `GroupJoin` is now a derived table holding the totals, joined to every row, instead of a statement that joins a `SELECT` without `FROM`. A paged inner source of `SelectMany` that does not read the outer element is joined as a plain derived table, and `JOIN LATERAL` is kept only for one that does.
+
 ## [0.1.0-preview.0.9.0] - 2026-10-28
 
 ### Added
