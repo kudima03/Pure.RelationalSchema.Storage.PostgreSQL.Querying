@@ -265,11 +265,8 @@ public sealed record TypedCellTests : IClassFixture<ExecutionFixture>
         return rows.Where(x => !x.Cells[id].Value.TextValue.StartsWith('9'));
     }
 
-    /// <summary>
-    /// The one statement the query runs over the stored tables.
-    /// </summary>
     [Fact]
-    public void ReadsCellsParsedWithStylesThatChangeTheirValueAsText()
+    public void RejectsCellsParsedWithStylesThatChangeTheirValue()
     {
         string decimals = Statement(db =>
             Named(db.Values)
@@ -281,30 +278,32 @@ public sealed record TypedCellTests : IClassFixture<ExecutionFixture>
                     )
                 )
         );
-        string hexadecimals = Statement(db =>
-            Named(db.Values)
-                .Select(x =>
-                    long.Parse(
-                        x.Cells[Small].Value.TextValue,
-                        NumberStyles.HexNumber,
-                        CultureInfo.InvariantCulture
-                    )
-                )
-        );
-        string unsigned = Statement(db =>
-            Named(db.Values)
-                .Select(x =>
-                    long.Parse(
-                        x.Cells[Small].Value.TextValue,
-                        NumberStyles.None,
-                        CultureInfo.InvariantCulture
-                    )
-                )
-        );
 
         Assert.DoesNotContain("AS text", Projection(decimals), StringComparison.Ordinal);
-        Assert.Contains("AS text", Projection(hexadecimals), StringComparison.Ordinal);
-        Assert.Contains("AS text", Projection(unsigned), StringComparison.Ordinal);
+        _ = Assert.Throws<NotSupportedException>(() =>
+            Statement(db =>
+                Named(db.Values)
+                    .Select(x =>
+                        long.Parse(
+                            x.Cells[Small].Value.TextValue,
+                            NumberStyles.HexNumber,
+                            CultureInfo.InvariantCulture
+                        )
+                    )
+            )
+        );
+        _ = Assert.Throws<NotSupportedException>(() =>
+            Statement(db =>
+                Named(db.Values)
+                    .Select(x =>
+                        long.Parse(
+                            x.Cells[Small].Value.TextValue,
+                            NumberStyles.None,
+                            CultureInfo.InvariantCulture
+                        )
+                    )
+            )
+        );
     }
 
     private static string Projection(string statement)
@@ -320,6 +319,9 @@ public sealed record TypedCellTests : IClassFixture<ExecutionFixture>
         return rows.Where(x => !x.Cells[ValueId].Value.TextValue.StartsWith('9'));
     }
 
+    /// <summary>
+    /// The one statement the query runs over the stored tables.
+    /// </summary>
     private string Statement<T>(Func<ExecutionTables, IQueryable<T>> query)
     {
         using RecordingConnection connection = new RecordingConnection(

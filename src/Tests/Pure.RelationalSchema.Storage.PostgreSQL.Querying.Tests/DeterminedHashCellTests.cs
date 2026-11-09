@@ -1,9 +1,5 @@
 using Pure.RelationalSchema.Abstractions.Column;
 
-// The tests of text operations PostgreSQL does not run over the bytes of a
-// determined_hash column are skipped until they are translated.
-#pragma warning disable xUnit1004
-
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying.Tests;
 
 /// <summary>
@@ -98,7 +94,7 @@ public sealed record DeterminedHashCellTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#83: No text of a bytea is translated (translator #106).")]
+    [Fact]
     public void JoinsDeterminedHashCellsToTextCells()
     {
         Enumeration.AssertSameElements(db =>
@@ -115,7 +111,7 @@ public sealed record DeterminedHashCellTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#83: No text of a bytea is translated (translator #106).")]
+    [Fact]
     public void UnitesDeterminedHashCellsWithTextCells()
     {
         Enumeration.AssertSameElements(db =>
@@ -124,7 +120,7 @@ public sealed record DeterminedHashCellTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#83: No text of a bytea is translated (translator #106).")]
+    [Fact]
     public void ConvertsTheCaseOfDeterminedHashCells()
     {
         Enumeration.AssertSameElements(db =>
@@ -132,7 +128,7 @@ public sealed record DeterminedHashCellTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#83: No text of a bytea is translated (translator #106).")]
+    [Fact]
     public void TrimsDeterminedHashCells()
     {
         Enumeration.AssertSameElements(db =>

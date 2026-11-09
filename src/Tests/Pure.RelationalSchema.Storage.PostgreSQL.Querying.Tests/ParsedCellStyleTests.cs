@@ -2,16 +2,14 @@ using System.Globalization;
 using Pure.RelationalSchema.Abstractions.Column;
 using Pure.RelationalSchema.Storage.Abstractions;
 
-// The tests of parses that are not read as enumeration gives them yet are skipped
-// until they are.
-#pragma warning disable xUnit1004
-
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying.Tests;
 
 /// <summary>
 /// A cell parsed to a type must be the value the same parse gives over the
 /// enumerated rows in memory, whatever the styles of the parse and the type parsed
-/// to: the column is read in its place only where its value is that of the parse.
+/// to: the column is read in its place only where its value is that of the parse,
+/// and a parse whose styles read another number from the text, hexadecimal or
+/// binary, or allow no sign is rejected, as no SQL cast honours them.
 /// </summary>
 public sealed record ParsedCellStyleTests : IClassFixture<ExecutionFixture>
 {
@@ -136,10 +134,10 @@ public sealed record ParsedCellStyleTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#77: The text is cast whatever the number styles (translator #104).")]
-    public void ParsesCellsAsHexadecimalNumbers()
+    [Fact]
+    public void RejectsCellsParsedAsHexadecimalNumbers()
     {
-        Enumeration.AssertSameElements(db =>
+        Enumeration.AssertNotSupported(db =>
             WithoutNull(db.Values)
                 .Select(x => new ValueTuple<int, long>(
                     int.Parse(x.Cells[Small].Value.TextValue, NumberStyles.HexNumber),
@@ -152,10 +150,10 @@ public sealed record ParsedCellStyleTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#77: The text is cast whatever the number styles (translator #104).")]
-    public void ParsesGuardedCellsAsHexadecimalNumbers()
+    [Fact]
+    public void RejectsGuardedCellsParsedAsHexadecimalNumbers()
     {
-        Enumeration.AssertSameElements(db =>
+        Enumeration.AssertNotSupported(db =>
             db.Values.Select(x =>
                 string.IsNullOrEmpty(x.Cells[Small].Value.TextValue)
                     ? null
@@ -165,10 +163,10 @@ public sealed record ParsedCellStyleTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#77: The text is cast whatever the number styles (translator #104).")]
-    public void FiltersRowsByCellsParsedAsHexadecimalNumbers()
+    [Fact]
+    public void RejectsFiltersByCellsParsedAsHexadecimalNumbers()
     {
-        Enumeration.AssertSameElements(db =>
+        Enumeration.AssertNotSupported(db =>
             WithoutNull(db.Values)
                 .Where(x =>
                     int.Parse(x.Cells[Small].Value.TextValue, NumberStyles.HexNumber)
@@ -178,10 +176,10 @@ public sealed record ParsedCellStyleTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#77: The text is cast whatever the number styles (translator #104).")]
-    public void ThrowsOnNegativeCellsParsedWithoutASign()
+    [Fact]
+    public void RejectsCellsParsedWithoutASign()
     {
-        Enumeration.AssertSameElements(db =>
+        Enumeration.AssertNotSupported(db =>
             WithoutNull(db.Values)
                 .Select(x =>
                     int.Parse(x.Cells[Number].Value.TextValue, NumberStyles.None)
@@ -189,7 +187,7 @@ public sealed record ParsedCellStyleTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#78: The timestamp read has no kind (translator #105).")]
+    [Fact]
     public void KeepsTheKindOfDateTimesParsedAsUniversal()
     {
         Enumeration.AssertSameValue(db =>

@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Text;
 using Pure.Primitives.String.Operations;
 using Pure.RelationalSchema.Abstractions.Column;
 using Pure.RelationalSchema.HashCodes;
@@ -34,6 +35,13 @@ internal sealed record ColumnProperty
         nameof(decimal.Parse),
         [typeof(string), typeof(IFormatProvider)]
     )!;
+
+    private static readonly MethodInfo Decoded = typeof(Encoding).GetMethod(
+        nameof(Encoding.GetString),
+        [typeof(byte[])]
+    )!;
+
+    private static readonly ConstantExpression Utf8 = Expression.Constant(Encoding.UTF8);
 
     private static readonly Dictionary<Type, MethodInfo> ToStrings = new()
     {
@@ -73,8 +81,8 @@ internal sealed record ColumnProperty
     /// The property type of the column, nullable as any column may hold NULL. A
     /// <c>float</c> column is a double to the translator, which writes no float as
     /// text; the SQL casts the real column itself. A <c>determined_hash</c> column
-    /// is text to the translator, whose bytes are read as UTF-8 text, and so is a
-    /// column of a type the translator does not map, whose cells cannot be
+    /// is a <c>byte[]</c>, a <c>bytea</c> whose bytes its text decodes as UTF-8. A
+    /// column of a type the translator does not map is text, whose cells cannot be
     /// translated.
     /// </summary>
     public Type Type =>
@@ -89,6 +97,7 @@ internal sealed record ColumnProperty
             "date" => typeof(DateOnly?),
             "time" => typeof(TimeOnly?),
             "double" or "float" => typeof(double?),
+            "determined_hash" => typeof(byte[]),
             _ => typeof(string),
         };
 
@@ -130,7 +139,8 @@ internal sealed record ColumnProperty
     /// <summary>
     /// The cell text of the column, as the rows read it, built from the property
     /// so that the translator renders it in SQL: empty text for NULL, otherwise the
-    /// invariant text of the value.
+    /// invariant text of the value, or the bytes of a <c>determined_hash</c> decoded
+    /// as UTF-8 text (<c>CONVERT_FROM(..., 'UTF8')</c>).
     /// </summary>
     /// <exception cref="NotSupportedException">
     /// The cells of the column's type cannot be translated.
@@ -139,7 +149,11 @@ internal sealed record ColumnProperty
     {
         return TypeName switch
         {
-            "string" or "determined_hash" => Expression.Coalesce(property, Empty),
+            "string" => Expression.Coalesce(property, Empty),
+            "determined_hash" => Expression.Coalesce(
+                Expression.Call(Utf8, Decoded, property),
+                Empty
+            ),
             "bool" => Guarded(
                 property,
                 Expression.Condition(
