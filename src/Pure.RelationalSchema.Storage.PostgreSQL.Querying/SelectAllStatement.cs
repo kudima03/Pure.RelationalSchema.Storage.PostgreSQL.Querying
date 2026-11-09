@@ -47,7 +47,7 @@ internal sealed record SelectAllStatement : IString
                     new JoinedString(
                         new DotString(),
                         [
-                            new WrappedString(new DoubleQuoteString(), _schemaName),
+                            new WrappedString(new DoubleQuoteString(), Escaped(_schemaName)),
                             new WrappedString(
                                 new DoubleQuoteString(),
                                 new HexString(new TableHash(_table))
@@ -58,6 +58,15 @@ internal sealed record SelectAllStatement : IString
                 new SemicolonString()
             )
         ).TextValue;
+
+    /// <summary>
+    /// The schema name with each double quote doubled, as a quoted identifier holds
+    /// it.
+    /// </summary>
+    private static IString Escaped(IString name)
+    {
+        return new String(name.TextValue.Replace("\"", "\"\"", StringComparison.Ordinal));
+    }
 
     public IEnumerator<IChar> GetEnumerator()
     {
