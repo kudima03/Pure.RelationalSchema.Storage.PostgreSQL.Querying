@@ -82,6 +82,24 @@ internal static class TestSchema
         _ = command.ExecuteNonQuery();
     }
 
+    /// <summary>
+    /// Inserts a row of default values, the only row a table without columns holds.
+    /// </summary>
+    public static void InsertDefaults(
+        IDbConnection connection,
+        ISchema schema,
+        ITable table
+    )
+    {
+        using IDbCommand command = connection.CreateCommand();
+
+        command.CommandText =
+            $"INSERT INTO {Quote(new SchemaHash(schema))}.{Quote(new TableHash(table))} "
+            + "DEFAULT VALUES;";
+
+        _ = command.ExecuteNonQuery();
+    }
+
     private static void Create(IDbConnection connection, ISchema schema, string nullity)
     {
         using IDbCommand command = connection.CreateCommand();

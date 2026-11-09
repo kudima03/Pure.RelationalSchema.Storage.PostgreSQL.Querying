@@ -19,7 +19,8 @@ using Table = Table.Table;
 /// <c>Children</c> share keys that are NULL, empty, repeated or unmatched; and
 /// <c>Entries</c> of a second schema on the same connection has such keys too.
 /// <c>Extras</c> has a column of each of the other types. Only the rows whose id
-/// starts with 9 hold NULL cells.
+/// starts with 9 hold NULL cells. <c>Archive</c> is a third schema holding the
+/// <c>Parents</c> table again, with rows of its own.
 /// </summary>
 public sealed record ExecutionFixture : IDisposable
 {
@@ -90,9 +91,11 @@ public sealed record ExecutionFixture : IDisposable
 
         Store = new Schema(new String("Store"), [Values, Parents, Children, Extras], []);
         Ledger = new Schema(new String("Ledger"), [Entries], []);
+        Archive = new Schema(new String("Archive"), [Parents], []);
 
         TestSchema.CreateNullable(Connection, Store);
         TestSchema.CreateNullable(Connection, Ledger);
+        TestSchema.CreateNullable(Connection, Archive);
 
         TestSchema.Insert(
             Connection,
@@ -221,6 +224,13 @@ public sealed record ExecutionFixture : IDisposable
             ["91", "NULL", "20"],
             ["92", "'b'", "NULL"]
         );
+        TestSchema.Insert(
+            Connection,
+            Archive,
+            Parents,
+            ["1", "'z'", "9"],
+            ["7", "'a'", "1"]
+        );
     }
 
     public IDbConnection Connection { get; }
@@ -228,6 +238,8 @@ public sealed record ExecutionFixture : IDisposable
     public ISchema Store { get; }
 
     public ISchema Ledger { get; }
+
+    public ISchema Archive { get; }
 
     public ITable Values { get; }
 

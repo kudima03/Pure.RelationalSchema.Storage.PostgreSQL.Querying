@@ -36,6 +36,11 @@ internal sealed record ExecutionTables
     public IQueryable<IRow> Entries => _table(_fixture.Ledger, _fixture.Entries);
 
     /// <summary>
+    /// The <c>Parents</c> table of the <c>Archive</c> schema.
+    /// </summary>
+    public IQueryable<IRow> ArchivedParents => _table(_fixture.Archive, _fixture.Parents);
+
+    /// <summary>
     /// The stored tables of the connection.
     /// </summary>
     public static ExecutionTables Stored(
@@ -51,29 +56,43 @@ internal sealed record ExecutionTables
     }
 
     /// <summary>
-    /// The rows of the stored tables, each table enumerated once, so that a query
-    /// reading a table twice reads the same rows.
+    /// The rows of the stored tables, each table of a schema enumerated once, so
+    /// that a query reading a table twice reads the same rows.
     /// </summary>
     public static ExecutionTables Enumerated(ExecutionFixture fixture)
     {
-        Dictionary<ITable, IRow[]> rows = new Dictionary<ITable, IRow[]>(
-            ReferenceEqualityComparer.Instance
-        );
+        List<(ISchema Schema, ITable Table, IRow[] Rows)> read = [];
         return new ExecutionTables(
             fixture,
             (schema, table) =>
             {
-                if (!rows.TryGetValue(table, out IRow[]? read))
+                if (
+                    !read.Any(x =>
+                        ReferenceEquals(x.Schema, schema)
+                        && ReferenceEquals(x.Table, table)
+                    )
+                )
                 {
-                    read =
-                    [
-                        .. new PostgreSqlStoredSchemaDataSet(schema, fixture.Connection)[
-                            table
-                        ].AsEnumerable(),
-                    ];
-                    rows.Add(table, read);
+                    read.Add(
+                        (
+                            schema,
+                            table,
+                            [
+                                .. new PostgreSqlStoredSchemaDataSet(
+                                    schema,
+                                    fixture.Connection
+                                )[table]
+                                    .AsEnumerable(),
+                            ]
+                        )
+                    );
                 }
-                return new EnumerableQuery<IRow>(read);
+                return new EnumerableQuery<IRow>(
+                    read.Single(x =>
+                        ReferenceEquals(x.Schema, schema)
+                        && ReferenceEquals(x.Table, table)
+                    ).Rows
+                );
             }
         );
     }
