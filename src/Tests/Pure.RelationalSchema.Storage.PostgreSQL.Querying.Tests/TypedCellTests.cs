@@ -268,6 +268,58 @@ public sealed record TypedCellTests : IClassFixture<ExecutionFixture>
     /// <summary>
     /// The one statement the query runs over the stored tables.
     /// </summary>
+    [Fact]
+    public void ReadsCellsParsedWithStylesThatChangeTheirValueAsText()
+    {
+        string decimals = Statement(db =>
+            Named(db.Values)
+                .Select(x =>
+                    long.Parse(
+                        x.Cells[Small].Value.TextValue,
+                        NumberStyles.Integer,
+                        CultureInfo.InvariantCulture
+                    )
+                )
+        );
+        string hexadecimals = Statement(db =>
+            Named(db.Values)
+                .Select(x =>
+                    long.Parse(
+                        x.Cells[Small].Value.TextValue,
+                        NumberStyles.HexNumber,
+                        CultureInfo.InvariantCulture
+                    )
+                )
+        );
+        string unsigned = Statement(db =>
+            Named(db.Values)
+                .Select(x =>
+                    long.Parse(
+                        x.Cells[Small].Value.TextValue,
+                        NumberStyles.None,
+                        CultureInfo.InvariantCulture
+                    )
+                )
+        );
+
+        Assert.DoesNotContain("AS text", Projection(decimals), StringComparison.Ordinal);
+        Assert.Contains("AS text", Projection(hexadecimals), StringComparison.Ordinal);
+        Assert.Contains("AS text", Projection(unsigned), StringComparison.Ordinal);
+    }
+
+    private static string Projection(string statement)
+    {
+        return statement.Split(" FROM ")[0];
+    }
+
+    /// <summary>
+    /// The rows whose cells hold values, whose text parses under any styles.
+    /// </summary>
+    private IQueryable<IRow> Named(IQueryable<IRow> rows)
+    {
+        return rows.Where(x => !x.Cells[ValueId].Value.TextValue.StartsWith('9'));
+    }
+
     private string Statement<T>(Func<ExecutionTables, IQueryable<T>> query)
     {
         using RecordingConnection connection = new RecordingConnection(

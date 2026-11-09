@@ -52,6 +52,9 @@ internal sealed record ColumnProperty
         [typeof(long)] = typeof(long?),
         [typeof(decimal)] = typeof(decimal?),
         [typeof(double)] = typeof(double?),
+        [typeof(ushort)] = typeof(ushort?),
+        [typeof(uint)] = typeof(uint?),
+        [typeof(ulong)] = typeof(ulong?),
     };
 
     private readonly IColumn _column;

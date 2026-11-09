@@ -136,7 +136,7 @@ public sealed record ParsedCellStyleTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#77: A cell parsed as a hexadecimal number is read as the column.")]
+    [Fact(Skip = "#77: The text is cast whatever the number styles (translator #104).")]
     public void ParsesCellsAsHexadecimalNumbers()
     {
         Enumeration.AssertSameElements(db =>
@@ -152,7 +152,7 @@ public sealed record ParsedCellStyleTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#77: A cell parsed as a hexadecimal number is read as the column.")]
+    [Fact(Skip = "#77: The text is cast whatever the number styles (translator #104).")]
     public void ParsesGuardedCellsAsHexadecimalNumbers()
     {
         Enumeration.AssertSameElements(db =>
@@ -165,7 +165,7 @@ public sealed record ParsedCellStyleTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#77: A cell parsed as a hexadecimal number is compared as the column.")]
+    [Fact(Skip = "#77: The text is cast whatever the number styles (translator #104).")]
     public void FiltersRowsByCellsParsedAsHexadecimalNumbers()
     {
         Enumeration.AssertSameElements(db =>
@@ -178,7 +178,7 @@ public sealed record ParsedCellStyleTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#77: A negative cell parsed with styles allowing no sign is read.")]
+    [Fact(Skip = "#77: The text is cast whatever the number styles (translator #104).")]
     public void ThrowsOnNegativeCellsParsedWithoutASign()
     {
         Enumeration.AssertSameElements(db =>
@@ -189,7 +189,7 @@ public sealed record ParsedCellStyleTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#78: A timestamp is read with an unspecified kind, not as universal.")]
+    [Fact(Skip = "#78: The timestamp read has no kind (translator #105).")]
     public void KeepsTheKindOfDateTimesParsedAsUniversal()
     {
         Enumeration.AssertSameValue(db =>
@@ -210,7 +210,7 @@ public sealed record ParsedCellStyleTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#85: ushort is neither parsed by the translator nor read as a result.")]
+    [Fact]
     public void ParsesCellsOfUShortColumnsAsUShorts()
     {
         Enumeration.AssertSameElements(db =>
@@ -219,7 +219,7 @@ public sealed record ParsedCellStyleTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#85: uint is neither parsed by the translator nor read as a result.")]
+    [Fact]
     public void ParsesCellsOfUIntColumnsAsUInts()
     {
         Enumeration.AssertSameElements(db =>
@@ -228,7 +228,7 @@ public sealed record ParsedCellStyleTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#85: ulong is neither parsed by the translator nor read as a result.")]
+    [Fact]
     public void ParsesCellsOfULongColumnsAsULongs()
     {
         Enumeration.AssertSameElements(db =>
@@ -236,7 +236,7 @@ public sealed record ParsedCellStyleTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#85: The translator parses no unsigned number.")]
+    [Fact]
     public void FiltersRowsByCellsParsedAsUnsignedNumbers()
     {
         Enumeration.AssertSameElements(db =>
@@ -250,7 +250,7 @@ public sealed record ParsedCellStyleTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#85: Results of unsigned numbers and bytes are not read.")]
+    [Fact]
     public void ReadsUnsignedNumbersAndBytes()
     {
         Enumeration.AssertSameElements(db =>

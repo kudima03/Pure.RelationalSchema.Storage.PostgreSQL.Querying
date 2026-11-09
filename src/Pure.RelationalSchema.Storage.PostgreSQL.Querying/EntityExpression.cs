@@ -133,7 +133,10 @@ internal sealed class EntityExpression : ExpressionVisitor
 
     /// <summary>
     /// Whether an argument of a parse, a constant or a static member such as
-    /// <c>CultureInfo.InvariantCulture</c>, reads the text as the cell writes it.
+    /// <c>CultureInfo.InvariantCulture</c>, reads the text as the cell writes it, so
+    /// that the parse is the value of the column: date styles that assume no local
+    /// time, and number styles that allow the sign the text may hold and read it as
+    /// a decimal number, not a hexadecimal or binary one.
     /// </summary>
     private static bool IsInvariant(Expression option)
     {
@@ -145,7 +148,10 @@ internal sealed class EntityExpression : ExpressionVisitor
                     CultureInfo.InvariantCulture
                 ),
                 DateTimeStyles styles => (styles & DateTimeStyles.AssumeLocal) == 0,
-                NumberStyles => true,
+                NumberStyles styles => (
+                    styles & (NumberStyles.AllowHexSpecifier | NumberStyles.AllowBinarySpecifier)
+                ) == 0
+                    && (styles & NumberStyles.AllowLeadingSign) != 0,
                 _ => false,
             };
     }

@@ -31,10 +31,8 @@ internal sealed record PostgreSqlQueryProvider : IQueryProvider
         TranslatedQuery translated = Translated(query);
         IReadOnlyList<object?> values = translated.Values();
         return translated.IsSequence ? values
-            : translated.IsElement
-                ? Element(values, translated.Name)
-                    ?? new ClosureValue(Expression.Default(translated.ElementType)).Value
-            : Aggregate(values, translated.ResultType);
+            : translated.IsElement ? Element(values, translated)
+            : values[0];
     }
 
     public TResult Execute<TResult>(Expression expression)
@@ -46,9 +44,12 @@ internal sealed record PostgreSqlQueryProvider : IQueryProvider
         }
         TranslatedQuery translated = Translated(query);
         IReadOnlyList<object?> values = translated.Values();
-        return translated.IsSequence ? Sequence<TResult>(values, translated)
-            : translated.IsElement ? Element(values.Cast<TResult>(), translated.Name)
-            : (TResult)Aggregate(values, typeof(TResult))!;
+        if (translated.IsSequence)
+        {
+            return Sequence<TResult>(values, translated);
+        }
+        object? value = translated.IsElement ? Element(values, translated) : values[0];
+        return (TResult)value!;
     }
 
     /// <summary>
@@ -65,7 +66,7 @@ internal sealed record PostgreSqlQueryProvider : IQueryProvider
 
     private static Expression Inlined(Expression expression)
     {
-        return new CapturedQueries().Visit(expression);
+        return new CapturedQueries().Visit(expression)!;
     }
 
     /// <exception cref="NotSupportedException">
@@ -104,32 +105,30 @@ internal sealed record PostgreSqlQueryProvider : IQueryProvider
 
     /// <summary>
     /// The element the operator returns from the row (or none) its SQL is limited to,
-    /// with the semantics of the operator.
+    /// with the semantics of the operator: the exception of LINQ to Objects where it
+    /// has no element to return, otherwise the default value of the operator.
     /// </summary>
-    private static T Element<T>(IEnumerable<T> values, string name)
+    private static object? Element(IReadOnlyList<object?> values, TranslatedQuery query)
     {
-        return name switch
+        return query.Name switch
         {
-            nameof(Queryable.First) or nameof(Queryable.Last) => values.First(),
-            nameof(Queryable.FirstOrDefault) or nameof(Queryable.LastOrDefault) =>
-                values.FirstOrDefault()!,
+            nameof(Queryable.First) or nameof(Queryable.Last) => values.Count == 0
+                ? throw new InvalidOperationException("Sequence contains no elements")
+                : values[0],
             nameof(Queryable.Single) => values.Single(),
-            nameof(Queryable.SingleOrDefault) => values.SingleOrDefault()!,
-            nameof(Queryable.ElementAt) => values.ElementAt(0),
-            _ => values.ElementAtOrDefault(0)!,
+            nameof(Queryable.SingleOrDefault) => values.Count == 0
+                ? query.Default
+                : values.Single(),
+            nameof(Queryable.ElementAt) => values.Count == 0
+                ? throw new ArgumentOutOfRangeException(
+                    nameof(values),
+                    "The query has no element at the index."
+                )
+                : values[0],
+            nameof(Queryable.MinBy) or nameof(Queryable.MaxBy) => values.Count > 0 ? values[0]
+                : query.HasNullableElement ? null
+                : throw new InvalidOperationException("Sequence contains no elements"),
+            _ => values.Count == 0 ? query.Default : values[0],
         };
-    }
-
-    /// <summary>
-    /// The one value of an aggregate; a NULL aggregate of a value type is that of no
-    /// elements.
-    /// </summary>
-    private static object? Aggregate(IReadOnlyList<object?> values, Type type)
-    {
-        object? value = values[0];
-        return
-            value is null && type.IsValueType && Nullable.GetUnderlyingType(type) is null
-            ? throw new InvalidOperationException("Sequence contains no elements")
-            : value;
     }
 }

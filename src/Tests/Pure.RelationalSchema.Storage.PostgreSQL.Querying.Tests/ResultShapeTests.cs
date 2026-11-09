@@ -1,10 +1,6 @@
 using Pure.RelationalSchema.Abstractions.Column;
 using Pure.RelationalSchema.Storage.Abstractions;
 
-// The tests of result shapes the translator renders but the provider does not read
-// yet are skipped until it does.
-#pragma warning disable xUnit1004
-
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying.Tests;
 
 /// <summary>
@@ -114,7 +110,7 @@ public sealed record ResultShapeTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#84: The element of a GroupBy with a result selector is not known.")]
+    [Fact]
     public void ReadsResultsOfGroupingWithAResultSelector()
     {
         Enumeration.AssertSameElements(db =>
@@ -125,7 +121,7 @@ public sealed record ResultShapeTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#84: The element of a GroupBy with a result selector is not known.")]
+    [Fact]
     public void ReadsResultsOfGroupingWithElementAndResultSelectors()
     {
         Enumeration.AssertSameElements(db =>
@@ -137,7 +133,7 @@ public sealed record ResultShapeTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#84: The constructor of a group key read as a whole is not known.")]
+    [Fact]
     public void ReadsValueTupleGroupKeysAsAWhole()
     {
         Enumeration.AssertSameElements(db =>
@@ -152,7 +148,7 @@ public sealed record ResultShapeTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#84: The constructor of a group key read as a whole is not known.")]
+    [Fact]
     public void ReadsAnonymousGroupKeysAsAWhole()
     {
         Enumeration.AssertSameElements(db =>
@@ -165,7 +161,7 @@ public sealed record ResultShapeTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#84: The item of a value tuple is not resolved to the row it holds.")]
+    [Fact]
     public void ReadsRowsThroughTheItemsOfValueTuples()
     {
         Enumeration.AssertSameElements(db =>
@@ -179,7 +175,7 @@ public sealed record ResultShapeTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#84: The item of a value tuple is not resolved to the row it holds.")]
+    [Fact]
     public void CountsTheCellsOfRowsThroughTheItemsOfValueTuples()
     {
         Enumeration.AssertSameElements(db =>
@@ -191,7 +187,7 @@ public sealed record ResultShapeTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#84: The row of a left join, which may be missing, is not read.")]
+    [Fact]
     public void ReadsRowsOfLeftJoins()
     {
         Enumeration.AssertSameElements(db =>
@@ -208,7 +204,7 @@ public sealed record ResultShapeTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#84: An object built with an initializer is read as its constructor.")]
+    [Fact]
     public void ReadsObjectsBuiltWithInitializers()
     {
         Enumeration.AssertSameElements(db =>
