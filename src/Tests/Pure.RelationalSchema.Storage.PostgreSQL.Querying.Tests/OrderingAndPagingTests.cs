@@ -1,9 +1,6 @@
 using Pure.RelationalSchema.Abstractions.Column;
 using Pure.RelationalSchema.Storage.Abstractions;
 
-// The tests of orders the translation does not keep yet are skipped until it does.
-#pragma warning disable xUnit1004
-
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying.Tests;
 
 /// <summary>
@@ -345,7 +342,7 @@ public sealed record OrderingAndPagingTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#86: ThenBy after a second OrderBy sorts after the keys of the first.")]
+    [Fact]
     public void OrdersByTheKeysOfALaterOrderBeforeThoseOfAnEarlierOne()
     {
         Enumeration.AssertSameOrder(db =>
@@ -357,7 +354,7 @@ public sealed record OrderingAndPagingTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#86: ThenBy after a second OrderBy sorts after the keys of the first.")]
+    [Fact]
     public void OrdersPagedRowsByTheKeysOfALaterOrderOnly()
     {
         Enumeration.AssertSameOrder(db =>
@@ -369,7 +366,7 @@ public sealed record OrderingAndPagingTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#86: DISTINCT does not keep the order of its source.")]
+    [Fact]
     public void KeepsTheOrderOfDistinctCells()
     {
         Enumeration.AssertSameOrder(db =>
@@ -379,7 +376,7 @@ public sealed record OrderingAndPagingTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#86: GROUP BY does not keep the order of its source.")]
+    [Fact]
     public void KeepsTheOrderOfGroups()
     {
         Enumeration.AssertSameOrder(db =>
@@ -389,7 +386,7 @@ public sealed record OrderingAndPagingTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#86: UNION ALL does not keep the order of its sides.")]
+    [Fact]
     public void KeepsTheOrderOfConcatenatedSides()
     {
         Enumeration.AssertSameOrder(db =>

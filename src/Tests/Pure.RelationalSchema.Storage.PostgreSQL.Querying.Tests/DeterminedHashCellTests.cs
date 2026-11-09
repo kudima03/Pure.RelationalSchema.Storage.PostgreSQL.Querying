@@ -1,9 +1,5 @@
 using Pure.RelationalSchema.Abstractions.Column;
 
-// The tests of text operations PostgreSQL does not run over the bytes of a
-// determined_hash column are skipped until they are translated.
-#pragma warning disable xUnit1004
-
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying.Tests;
 
 /// <summary>
@@ -98,7 +94,7 @@ public sealed record DeterminedHashCellTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#83: PostgreSQL has no operator comparing a bytea with a text column.")]
+    [Fact]
     public void JoinsDeterminedHashCellsToTextCells()
     {
         Enumeration.AssertSameElements(db =>
@@ -115,7 +111,7 @@ public sealed record DeterminedHashCellTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#83: PostgreSQL does not unite a bytea with a text column.")]
+    [Fact]
     public void UnitesDeterminedHashCellsWithTextCells()
     {
         Enumeration.AssertSameElements(db =>
@@ -124,7 +120,7 @@ public sealed record DeterminedHashCellTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#83: PostgreSQL has no UPPER of a bytea.")]
+    [Fact]
     public void ConvertsTheCaseOfDeterminedHashCells()
     {
         Enumeration.AssertSameElements(db =>
@@ -132,7 +128,7 @@ public sealed record DeterminedHashCellTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#83: BTRIM of a bytea trims the bytes of the white space characters.")]
+    [Fact]
     public void TrimsDeterminedHashCells()
     {
         Enumeration.AssertSameElements(db =>

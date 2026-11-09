@@ -1,7 +1,6 @@
 using System.Data;
 using System.Linq.Expressions;
 using System.Reflection;
-using Pure.RelationalSchema.Abstractions.Table;
 using Pure.RelationalSchema.Storage.Abstractions;
 
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying;
@@ -10,17 +9,23 @@ namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying;
 /// Reads an element of a translated query from the columns of its result, in the
 /// order the translator projects them: the columns of a row's table, one column for
 /// a scalar, and the arguments of a constructed object (an anonymous type, a value
-/// tuple, ...) in turn. The element expression (see <see cref="QueryElement"/>)
-/// names the table of each row and the constructor of each object.
+/// tuple, ...) in turn, followed by the members its initializer assigns. The element
+/// expression (see <see cref="QueryElement"/>) names the table of each row and the
+/// constructor of each object.
 /// </summary>
 internal sealed record ResultReader : IResultReader
 {
     private static readonly HashSet<Type> Scalars =
     [
         typeof(bool),
+        typeof(byte),
+        typeof(sbyte),
         typeof(short),
+        typeof(ushort),
         typeof(int),
+        typeof(uint),
         typeof(long),
+        typeof(ulong),
         typeof(float),
         typeof(double),
         typeof(decimal),
@@ -52,43 +57,71 @@ internal sealed record ResultReader : IResultReader
     {
         if (type == typeof(IRow))
         {
-            return QueryElement.TableOf(element) is ITable table
-                ? new RowReader(table)
+            return QueryElement.RowOf(element) is ElementRow row
+                ? new RowReader(row.Table, row.IsOptional)
                 : null;
         }
         if (Scalars.Contains(Nullable.GetUnderlyingType(type) ?? type))
         {
             return new ScalarReader(type);
         }
-        if (
-            Construction(element)
-            is not { Constructor: ConstructorInfo constructor } creation
-        )
+        Expression? resolved = QueryElement.Resolved(element);
+        NewExpression? creation = resolved switch
+        {
+            NewExpression construction => construction,
+            MemberInitExpression initialized => initialized.NewExpression,
+            _ => null,
+        };
+        if (creation is not { Constructor: ConstructorInfo constructor })
         {
             return null;
         }
+        MemberInitExpression? initialization = resolved as MemberInitExpression;
         ParameterInfo[] parameters = constructor.GetParameters();
-        IResultReader?[] readers =
+        IResultReader?[] arguments =
         [
             .. creation.Arguments.Select(
-                (argument, index) => Reader(parameters[index].ParameterType, argument)
+                (argument, index) =>
+                    initialization is not null
+                    && QueryElement.IsReplaced(parameters[index], initialization)
+                        ? new DefaultReader(parameters[index].ParameterType)
+                        : Reader(parameters[index].ParameterType, argument)
             ),
         ];
-        return readers.Any(x => x is null)
-            ? null
-            : new ConstructorReader(constructor, readers!);
+        if (arguments.Any(x => x is null))
+        {
+            return null;
+        }
+        ConstructorReader constructed = new(constructor, arguments!);
+        return initialization is null
+            ? constructed
+            : Initialized(constructed, initialization.Bindings);
     }
 
     /// <summary>
-    /// The constructor call the element is, when it is one.
+    /// The reader of an object whose initializer assigns members, properties or
+    /// fields, after its constructor, each read in turn after the arguments the
+    /// initializer does not replace; null when a binding is not an assignment or
+    /// assigns a value that cannot be read.
     /// </summary>
-    private static NewExpression? Construction(Expression? element)
+    private static IResultReader? Initialized(
+        IResultReader constructed,
+        IReadOnlyList<MemberBinding> bindings
+    )
     {
-        return QueryElement.Resolved(element) switch
+        List<(MemberInfo Member, IResultReader Reader)> members = [];
+        foreach (MemberBinding binding in bindings)
         {
-            NewExpression creation => creation,
-            MemberInitExpression initialization => initialization.NewExpression,
-            _ => null,
-        };
+            if (
+                binding is not MemberAssignment assignment
+                || Reader(assignment.Expression.Type, assignment.Expression)
+                    is not IResultReader reader
+            )
+            {
+                return null;
+            }
+            members.Add((assignment.Member, reader));
+        }
+        return new InitializerReader(constructed, members);
     }
 }

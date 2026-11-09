@@ -8,7 +8,7 @@ namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying.Tests;
 /// Compares what a query returns over the stored tables of
 /// <see cref="ExecutionFixture"/>, translated to one statement, with what it returns
 /// over their enumerated rows in memory: the same elements, or the same type of
-/// exception.
+/// exception; or that the translation rejects it where the rows give an outcome.
 /// </summary>
 internal sealed record ExecutionComparison
 {
@@ -45,6 +45,27 @@ internal sealed record ExecutionComparison
     public void AssertSameValue<T>(Func<ExecutionTables, T> query)
     {
         AssertSameOutcome(tables => [Canonical(query(tables))]);
+    }
+
+    /// <summary>
+    /// The query over the stored tables throws <see cref="NotSupportedException"/>
+    /// before any statement runs, where the one over the enumerated rows does not.
+    /// </summary>
+    public void AssertNotSupported<T>(Func<ExecutionTables, IQueryable<T>> query)
+    {
+        string[] expected = Outcome(() =>
+            query(ExecutionTables.Enumerated(_fixture)).AsEnumerable().Select(Canonical)
+        );
+
+        using RecordingConnection connection = new RecordingConnection(
+            _fixture.Connection
+        );
+
+        Assert.NotEqual(Thrown + typeof(NotSupportedException).FullName, expected[0]);
+        _ = Assert.Throws<NotSupportedException>(() =>
+            query(ExecutionTables.Stored(_fixture, connection)).ToList()
+        );
+        Assert.Empty(connection.Statements);
     }
 
     private void AssertSameOutcome(Func<ExecutionTables, IEnumerable<string>> query)

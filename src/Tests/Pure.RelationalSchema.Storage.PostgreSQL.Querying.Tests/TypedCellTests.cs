@@ -265,6 +265,60 @@ public sealed record TypedCellTests : IClassFixture<ExecutionFixture>
         return rows.Where(x => !x.Cells[id].Value.TextValue.StartsWith('9'));
     }
 
+    [Fact]
+    public void RejectsCellsParsedWithStylesThatChangeTheirValue()
+    {
+        string decimals = Statement(db =>
+            Named(db.Values)
+                .Select(x =>
+                    long.Parse(
+                        x.Cells[Small].Value.TextValue,
+                        NumberStyles.Integer,
+                        CultureInfo.InvariantCulture
+                    )
+                )
+        );
+
+        Assert.DoesNotContain("AS text", Projection(decimals), StringComparison.Ordinal);
+        _ = Assert.Throws<NotSupportedException>(() =>
+            Statement(db =>
+                Named(db.Values)
+                    .Select(x =>
+                        long.Parse(
+                            x.Cells[Small].Value.TextValue,
+                            NumberStyles.HexNumber,
+                            CultureInfo.InvariantCulture
+                        )
+                    )
+            )
+        );
+        _ = Assert.Throws<NotSupportedException>(() =>
+            Statement(db =>
+                Named(db.Values)
+                    .Select(x =>
+                        long.Parse(
+                            x.Cells[Small].Value.TextValue,
+                            NumberStyles.None,
+                            CultureInfo.InvariantCulture
+                        )
+                    )
+            )
+        );
+    }
+
+    private static string Projection(string statement)
+    {
+        return statement.Split(" FROM ")[0];
+    }
+
+    /// <summary>
+    /// The rows whose cells hold values, whose text parses under any styles.
+    /// </summary>
+    private IQueryable<IRow> Named(IQueryable<IRow> rows)
+    {
+        return rows.Where(x => !x.Cells[ValueId].Value.TextValue.StartsWith('9'));
+    }
+
     /// <summary>
     /// The one statement the query runs over the stored tables.
     /// </summary>

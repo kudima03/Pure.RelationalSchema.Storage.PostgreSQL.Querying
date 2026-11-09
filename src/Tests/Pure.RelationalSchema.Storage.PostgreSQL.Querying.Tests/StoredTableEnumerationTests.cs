@@ -5,9 +5,6 @@ using Pure.RelationalSchema.Abstractions.Table;
 using Pure.RelationalSchema.Storage.Abstractions;
 using String = Pure.Primitives.String.String;
 
-// The tests of enumerations that fail yet are skipped until they do not.
-#pragma warning disable xUnit1004
-
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying.Tests;
 
 using Schema = Schema.Schema;
@@ -52,7 +49,7 @@ public sealed record StoredTableEnumerationTests : IClassFixture<ExecutionFixtur
         Assert.Equal(MatchingChildren(), matches);
     }
 
-    [Fact(Skip = "#80: The reader of an asynchronous enumeration stays open per row.")]
+    [Fact]
     public async Task RunsAQueryWhileATableIsEnumeratedAsynchronously()
     {
         IQueryable<IRow> children = Store[_fixture.Children];
@@ -69,7 +66,7 @@ public sealed record StoredTableEnumerationTests : IClassFixture<ExecutionFixtur
         Assert.Equal(MatchingChildren(), matches);
     }
 
-    [Fact(Skip = "#81: Asynchronous enumeration casts the connection to DbConnection.")]
+    [Fact]
     public async Task EnumeratesAsynchronouslyOverAConnectionThatIsNoDbConnection()
     {
         using RecordingConnection connection = new RecordingConnection(
@@ -157,7 +154,7 @@ public sealed record StoredTableEnumerationTests : IClassFixture<ExecutionFixtur
         Assert.True(rows.Any(x => x.Cells[ParentKey].Value.TextValue == "quoted"));
     }
 
-    [Fact(Skip = "#82: The statement of an enumeration does not escape the schema name.")]
+    [Fact]
     public void EnumeratesATableOfASchemaNamedWithAQuote()
     {
         IRow[] rows = [.. Quoted().AsEnumerable()];

@@ -15,7 +15,9 @@ namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying;
 /// a parse of that text (<c>Guid.Parse(text)</c>, <c>DateOnly.Parse(text,
 /// InvariantCulture)</c>, ...), bare or guarded by <c>string.IsNullOrEmpty(text) ?
 /// null : ...</c>, becomes the column property itself, read as its type (see
-/// <see cref="ColumnProperty.Typed"/>), <c>string.IsNullOrEmpty(text)</c> of such a
+/// <see cref="ColumnProperty.Typed"/>) where its styles keep the value of the text
+/// (any other parse stays a parse of the text, which the translator renders or
+/// rejects), <c>string.IsNullOrEmpty(text)</c> of such a
 /// column becomes its test for NULL, and the count and keys of <c>row.Cells</c>
 /// become the columns of the row's table.
 /// </summary>
@@ -133,7 +135,12 @@ internal sealed class EntityExpression : ExpressionVisitor
 
     /// <summary>
     /// Whether an argument of a parse, a constant or a static member such as
-    /// <c>CultureInfo.InvariantCulture</c>, reads the text as the cell writes it.
+    /// <c>CultureInfo.InvariantCulture</c>, reads the text as the cell writes it, so
+    /// that the parse is the value of the column: date styles that assume no time
+    /// zone, local or universal (the translator reads a universal parse as the
+    /// instant with the kind <c>Utc</c>), and number styles that allow the sign the
+    /// text may hold and read it as a decimal number, not a hexadecimal or binary
+    /// one (the translator rejects any other).
     /// </summary>
     private static bool IsInvariant(Expression option)
     {
@@ -144,8 +151,13 @@ internal sealed class EntityExpression : ExpressionVisitor
                     provider,
                     CultureInfo.InvariantCulture
                 ),
-                DateTimeStyles styles => (styles & DateTimeStyles.AssumeLocal) == 0,
-                NumberStyles => true,
+                DateTimeStyles styles => (
+                    styles & (DateTimeStyles.AssumeLocal | DateTimeStyles.AssumeUniversal)
+                ) == 0,
+                NumberStyles styles => (
+                    styles & (NumberStyles.AllowHexSpecifier | NumberStyles.AllowBinarySpecifier)
+                ) == 0
+                    && (styles & NumberStyles.AllowLeadingSign) != 0,
                 _ => false,
             };
     }

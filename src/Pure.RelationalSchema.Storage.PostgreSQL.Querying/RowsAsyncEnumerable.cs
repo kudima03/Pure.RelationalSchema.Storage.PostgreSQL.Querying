@@ -1,16 +1,18 @@
 using System.Data;
 using System.Data.Common;
-using Pure.Collections.Generic;
 using Pure.Primitives.Abstractions.String;
-using Pure.Primitives.String.Operations;
-using Pure.RelationalSchema.Abstractions.Column;
 using Pure.RelationalSchema.Abstractions.Table;
-using Pure.RelationalSchema.HashCodes;
 using Pure.RelationalSchema.Storage.Abstractions;
-using String = Pure.Primitives.String.String;
 
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying;
 
+/// <summary>
+/// The rows of a stored table, read asynchronously with its
+/// <see cref="SelectAllStatement"/> when the connection is a
+/// <see cref="DbConnection"/>, otherwise as <see cref="RowsEnumerable"/> reads them.
+/// Every row is read before the first is returned, so that the connection is free
+/// for the queries run while the rows are enumerated.
+/// </summary>
 internal sealed record RowsAsyncEnumerable : IAsyncEnumerable<IRow>
 {
     private readonly IDbConnection _connection;
@@ -30,38 +32,31 @@ internal sealed record RowsAsyncEnumerable : IAsyncEnumerable<IRow>
         CancellationToken cancellationToken = default
     )
     {
-        DbConnection conn = (DbConnection)_connection;
-        await using DbCommand cmd = conn.CreateCommand();
-        cmd.CommandText = new SelectAllStatement(_table, _schemaName).TextValue;
+        IReadOnlyList<IRow> rows = _connection is DbConnection connection
+            ? await ReadAsync(connection, cancellationToken)
+            : [.. new RowsEnumerable(_connection, _schemaName, _table)];
+        foreach (IRow row in rows)
+        {
+            yield return row;
+        }
+    }
 
-        await using DbDataReader reader = await cmd.ExecuteReaderAsync(cancellationToken);
-
+    private async Task<IReadOnlyList<IRow>> ReadAsync(
+        DbConnection connection,
+        CancellationToken cancellationToken
+    )
+    {
+        await using DbCommand command = connection.CreateCommand();
+        command.CommandText = new SelectAllStatement(_table, _schemaName).TextValue;
+        await using DbDataReader reader = await command.ExecuteReaderAsync(
+            cancellationToken
+        );
+        RowReader rows = new(_table);
+        List<IRow> read = [];
         while (await reader.ReadAsync(cancellationToken))
         {
-            IReadOnlyDictionary<string, string> rawCells = _table
-                .Columns.Select(x =>
-                    new TrimmedHash(new HexString(new ColumnHash(x))).TextValue
-                )
-                .ToDictionary(x => x, x => new CellText(reader[x]).TextValue);
-
-            IReadOnlyDictionary<IColumn, ICell> cells = new Dictionary<
-                IColumn,
-                IColumn,
-                ICell
-            >(
-                _table.Columns,
-                x => x,
-                x => new Cell(
-                    new String(
-                        rawCells[
-                            new TrimmedHash(new HexString(new ColumnHash(x))).TextValue
-                        ]
-                    )
-                ),
-                x => new ColumnHash(x)
-            );
-
-            yield return new Row(cells);
+            read.Add(rows.Row(reader, 0)!);
         }
+        return read;
     }
 }

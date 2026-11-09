@@ -25,6 +25,8 @@ internal sealed record TranslatedQuery
         nameof(Queryable.LastOrDefault),
         nameof(Queryable.ElementAt),
         nameof(Queryable.ElementAtOrDefault),
+        nameof(Queryable.MinBy),
+        nameof(Queryable.MaxBy),
     ];
 
     private readonly MethodCallExpression _call;
@@ -51,6 +53,21 @@ internal sealed record TranslatedQuery
 
     public Type ElementType =>
         IsSequence ? _call.Type.GetGenericArguments()[0] : _call.Type;
+
+    /// <summary>
+    /// Whether the element may be null: one of a reference or nullable type.
+    /// </summary>
+    public bool HasNullableElement =>
+        !ElementType.IsValueType || Nullable.GetUnderlyingType(ElementType) is not null;
+
+    /// <summary>
+    /// The value an <c>...OrDefault</c> operator returns when no row is read: the
+    /// default value given after its predicate, otherwise that of the element type.
+    /// </summary>
+    public object? Default =>
+        Name.EndsWith("OrDefault", StringComparison.Ordinal) && _call.Arguments.Count == 3
+            ? new ClosureValue(_call.Arguments[2]).Value
+            : new ClosureValue(Expression.Default(ElementType)).Value;
 
     /// <summary>
     /// The values the rows of the SQL result are read as: the elements of a sequence

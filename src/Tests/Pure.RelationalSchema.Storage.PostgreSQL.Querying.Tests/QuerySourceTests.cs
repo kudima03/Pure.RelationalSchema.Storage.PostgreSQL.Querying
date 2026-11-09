@@ -1,10 +1,6 @@
 using Pure.RelationalSchema.Abstractions.Column;
 using Pure.RelationalSchema.Storage.Abstractions;
 
-// The tests of sources that are not translated as stored tables yet are skipped
-// until they are.
-#pragma warning disable xUnit1004
-
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying.Tests;
 
 /// <summary>
@@ -107,7 +103,7 @@ public sealed record QuerySourceTests : IClassFixture<ExecutionFixture>
         Assert.Equal(["2"], ids);
     }
 
-    [Fact(Skip = "#79: A table captured as IStoredTableDataSet is not inlined.")]
+    [Fact]
     public void InlinesTablesCapturedAsStoredTableDataSets()
     {
         IQueryable<IRow> parents = Store[_fixture.Parents];
@@ -128,7 +124,7 @@ public sealed record QuerySourceTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#79: A table captured as IEnumerable<IRow> is not inlined.")]
+    [Fact]
     public void InlinesTablesCapturedAsEnumerables()
     {
         IQueryable<IRow> parents = Store[_fixture.Parents];
@@ -151,7 +147,7 @@ public sealed record QuerySourceTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#79: A table read from a captured schema data set is not inlined.")]
+    [Fact]
     public void InlinesTablesReadFromACapturedSchemaDataSet()
     {
         PostgreSqlStoredSchemaDataSet store = Store;
@@ -173,7 +169,7 @@ public sealed record QuerySourceTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#79: A query a method returns inside a lambda is not inlined.")]
+    [Fact]
     public void InlinesQueriesReturnedByMethodsInsideLambdas()
     {
         Enumeration.AssertSameElements(db =>
@@ -188,7 +184,7 @@ public sealed record QuerySourceTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#76: The rows of the second table are read as rows of the first.")]
+    [Fact]
     public void ThrowsWhenASetOperationCombinesValueTuplesOfRowsOfDifferentTables()
     {
         ExecutionTables db = ExecutionTables.Stored(_fixture, _fixture.Connection);
@@ -200,7 +196,7 @@ public sealed record QuerySourceTests : IClassFixture<ExecutionFixture>
         _ = Assert.Throws<NotSupportedException>(() => combined.ToList());
     }
 
-    [Fact(Skip = "#76: The rows of the second table are read as rows of the first.")]
+    [Fact]
     public void ThrowsWhenASetOperationCombinesObjectsOfRowsOfDifferentTables()
     {
         ExecutionTables db = ExecutionTables.Stored(_fixture, _fixture.Connection);
@@ -209,6 +205,18 @@ public sealed record QuerySourceTests : IClassFixture<ExecutionFixture>
             .Parents.Select(x => new { Row = x, Source = "parent" })
             .Concat(db.Entries.Select(x => new { Row = x, Source = "entry" }))
             .Select(x => new ValueTuple<IRow, string>(x.Row, x.Source));
+
+        _ = Assert.Throws<NotSupportedException>(() => combined.ToList());
+    }
+
+    [Fact]
+    public void ThrowsWhenASetOperationCombinesInitializedObjectsOfRowsOfDifferentTables()
+    {
+        ExecutionTables db = ExecutionTables.Stored(_fixture, _fixture.Connection);
+
+        IQueryable<Holder> combined = db
+            .Parents.Select(x => new Holder { Row = x })
+            .Concat(db.Entries.Select(x => new Holder { Row = x }));
 
         _ = Assert.Throws<NotSupportedException>(() => combined.ToList());
     }
@@ -228,6 +236,11 @@ public sealed record QuerySourceTests : IClassFixture<ExecutionFixture>
                     ))
                 )
         );
+    }
+
+    private sealed record Holder
+    {
+        public IRow? Row { get; set; }
     }
 
     /// <summary>
