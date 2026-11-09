@@ -98,7 +98,7 @@ public sealed record DeterminedHashCellTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#83: PostgreSQL has no operator comparing a bytea with a text column.")]
+    [Fact(Skip = "#83: No text of a bytea is translated (translator #106).")]
     public void JoinsDeterminedHashCellsToTextCells()
     {
         Enumeration.AssertSameElements(db =>
@@ -115,7 +115,7 @@ public sealed record DeterminedHashCellTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#83: PostgreSQL does not unite a bytea with a text column.")]
+    [Fact(Skip = "#83: No text of a bytea is translated (translator #106).")]
     public void UnitesDeterminedHashCellsWithTextCells()
     {
         Enumeration.AssertSameElements(db =>
@@ -124,7 +124,7 @@ public sealed record DeterminedHashCellTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#83: PostgreSQL has no UPPER of a bytea.")]
+    [Fact(Skip = "#83: No text of a bytea is translated (translator #106).")]
     public void ConvertsTheCaseOfDeterminedHashCells()
     {
         Enumeration.AssertSameElements(db =>
@@ -132,7 +132,7 @@ public sealed record DeterminedHashCellTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#83: BTRIM of a bytea trims the bytes of the white space characters.")]
+    [Fact(Skip = "#83: No text of a bytea is translated (translator #106).")]
     public void TrimsDeterminedHashCells()
     {
         Enumeration.AssertSameElements(db =>

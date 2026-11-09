@@ -345,7 +345,7 @@ public sealed record OrderingAndPagingTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#86: ThenBy after a second OrderBy sorts after the keys of the first.")]
+    [Fact(Skip = "#86: ThenBy sorts after an earlier OrderBy (translator #103).")]
     public void OrdersByTheKeysOfALaterOrderBeforeThoseOfAnEarlierOne()
     {
         Enumeration.AssertSameOrder(db =>
@@ -357,7 +357,7 @@ public sealed record OrderingAndPagingTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#86: ThenBy after a second OrderBy sorts after the keys of the first.")]
+    [Fact(Skip = "#86: ThenBy sorts after an earlier OrderBy (translator #103).")]
     public void OrdersPagedRowsByTheKeysOfALaterOrderOnly()
     {
         Enumeration.AssertSameOrder(db =>
@@ -369,7 +369,7 @@ public sealed record OrderingAndPagingTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#86: DISTINCT does not keep the order of its source.")]
+    [Fact(Skip = "#86: DISTINCT drops the order of its source (translator #103).")]
     public void KeepsTheOrderOfDistinctCells()
     {
         Enumeration.AssertSameOrder(db =>
@@ -379,7 +379,7 @@ public sealed record OrderingAndPagingTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#86: GROUP BY does not keep the order of its source.")]
+    [Fact(Skip = "#86: GROUP BY drops the order of its source (translator #103).")]
     public void KeepsTheOrderOfGroups()
     {
         Enumeration.AssertSameOrder(db =>
@@ -389,7 +389,7 @@ public sealed record OrderingAndPagingTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = "#86: UNION ALL does not keep the order of its sides.")]
+    [Fact(Skip = "#86: UNION ALL drops the order of its sides (translator #103).")]
     public void KeepsTheOrderOfConcatenatedSides()
     {
         Enumeration.AssertSameOrder(db =>
