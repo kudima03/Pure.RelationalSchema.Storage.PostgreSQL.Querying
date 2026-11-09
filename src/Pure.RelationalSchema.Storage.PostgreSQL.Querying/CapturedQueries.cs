@@ -19,7 +19,7 @@ internal sealed class CapturedQueries : ExpressionVisitor
             && IsQuery(node.Type)
             && !new FreeParameters().In(node)
             && new ClosureValue(node).Value is IQueryable query
-            ? Visit(query.Expression)!
+            ? Visit(query.Expression)
             : base.Visit(node);
     }
 
