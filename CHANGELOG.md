@@ -5,6 +5,16 @@ All notable changes to `Pure.RelationalSchema.Storage.PostgreSQL.Querying` are d
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-preview.0.11.0] - 2026-11-11
+
+### Added
+
+- Support for .NET 11 (`net11.0` is added to the target frameworks; `net8.0`, `net9.0` and `net10.0` are kept).
+
+### Changed
+
+- Updated the `Linq.Expressions.Translation.PostgreSql` dependency to 0.1.0-preview.0.9.0, `Pure.Collections.Generic` to 0.1.0-preview.3.1.0, `Pure.Primitives` to 3.8.0, `Pure.Primitives.Abstractions` to 4.4.0, `Pure.Primitives.Choices` to 1.4.0, `Pure.Primitives.String.Operations` to 1.8.0, `Pure.RelationalSchema.HashCodes` to 3.4.0, `Pure.RelationalSchema.Storage` to 0.1.0-preview.8.1.0 and `Pure.RelationalSchema.Storage.PostgreSQL.Abstractions` to 0.1.0-preview.0.2.0.
+
 ## [0.1.0-preview.0.10.0] - 2026-11-09
 
 ### Added
