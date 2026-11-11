@@ -23,9 +23,9 @@ namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying;
 /// </summary>
 internal sealed class EntityExpression : ExpressionVisitor
 {
-    private readonly Dictionary<object, Expression> _roots = new(
+    private readonly Dictionary<object, Expression> _roots = [with(
         ReferenceEqualityComparer.Instance
-    );
+    )];
 
     private readonly Dictionary<
         string,
