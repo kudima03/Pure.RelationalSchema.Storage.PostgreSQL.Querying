@@ -97,6 +97,7 @@ Enumerating a table, synchronously or asynchronously, reads every row before ret
 - .NET 8
 - .NET 9
 - .NET 10
+- .NET 11
 
 ## Installation
 
