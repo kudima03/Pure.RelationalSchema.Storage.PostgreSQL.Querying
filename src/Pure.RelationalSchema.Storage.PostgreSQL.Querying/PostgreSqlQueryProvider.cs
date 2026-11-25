@@ -70,12 +70,13 @@ internal sealed record PostgreSqlQueryProvider : IQueryProvider
     }
 
     /// <exception cref="NotSupportedException">
-    /// The query is not a query operator over stored tables.
+    /// The query is not a query operator over stored tables: a call of
+    /// <see cref="Queryable"/> or a PostgreSQL marker returning a query.
     /// </exception>
     private static TranslatedQuery Translated(Expression query)
     {
         return query is MethodCallExpression call
-            && call.Method.DeclaringType == typeof(Queryable)
+            && (call.Method.DeclaringType == typeof(Queryable) || QueryElement.IsMarker(call))
             ? new TranslatedQuery(call)
             : throw new NotSupportedException(
                 "The query is not a query operator over stored tables, so it cannot "

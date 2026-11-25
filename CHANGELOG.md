@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- In-memory sequences of scalars and tuples beside stored tables are left to the translator, which writes them as `VALUES`: the inner sequence of `Join`, `GroupJoin` and `SelectMany`, a side of `Concat`, `Union`, `Intersect` and `Except`, a subquery, a root of several elements created through the provider of a table, and `SelectMany` from the one-element root to such a sequence. A query still needs a stored table, and what the translator refuses (an empty sequence, rows, objects or unsigned numbers, a sequence computed from the outer element) throws `NotSupportedException` with its exception as `InnerException`; a tuple of a sequence read whole throws as a result shape that cannot be read.
+- The translator's PostgreSQL markers run over stored tables: `PostgreSqlWindows.Over` (every window function, aggregates over the rows of `ROWS` and `RANGE` frames) and `PostgreSqlRecursion.WithRecursive` (with or without a maximum depth) as the query operator itself or anywhere inside a query. The provider keeps the marker calls when it inlines captured queries, rewrites the cells read in their lambdas into column properties and reads their results: what the selector of `Over` builds from the row of its source, a stored row included, and the element of the seed of `WithRecursive`, rows of a table included. A row deeper than the maximum depth fails the statement with PostgreSQL's error.
+
+### Changed
+
+- Updated the `Linq.Expressions.Translation.PostgreSql` dependency from 0.1.0-preview.0.9.0 to 0.1.0-preview.0.10.0, which also translates dates and times built from their parts, `string.Join` of values, groups and subqueries, a value of an ordered group's `First` and `Last`, `Max` and `Min` of an array of values (`GREATEST`/`LEAST`) and `string.Normalize`.
+- A query of stored tables of several connections beside an in-memory root throws `NotSupportedException` saying it reads tables of more than one connection, where it said it reads sources other than stored tables.
+
 ## [0.1.0-preview.0.11.1] - 2026-11-25
 
 ### Fixed

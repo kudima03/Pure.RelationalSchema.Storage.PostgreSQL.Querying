@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.ObjectModel;
 using System.Data;
 using System.Diagnostics.CodeAnalysis;
@@ -8,10 +7,14 @@ using Linq.Expressions.Translation.PostgreSql;
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying;
 
 /// <summary>
-/// A query operator whose tree must read stored tables of one connection only, or
-/// one row of aggregates over them from a one-element in-memory root. The translator
-/// turns it into SQL, which runs as one statement and whose rows are read as the
-/// values of the result.
+/// A query operator — of <see cref="Queryable"/> or a PostgreSQL marker of the
+/// translator that returns a query (<see cref="PostgreSqlWindows.Over"/>,
+/// <see cref="PostgreSqlRecursion.WithRecursive{TSource}(IQueryable{TSource},
+/// Expression{Func{IQueryable{TSource}, IQueryable{TSource}}})"/>) — whose tree must
+/// read stored tables of one connection, and besides them in-memory sequences only
+/// (<see cref="EnumerableQuery"/>), which the translator writes as <c>VALUES</c> or
+/// refuses. The translator turns it into SQL, which runs as one statement and whose
+/// rows are read as the values of the result.
 /// </summary>
 internal sealed record TranslatedQuery
 {
@@ -74,9 +77,10 @@ internal sealed record TranslatedQuery
     /// or of an element operator, or the one value of an aggregate.
     /// </summary>
     /// <exception cref="NotSupportedException">
-    /// The operator does not read stored tables of one connection only, combines
-    /// rows of different tables, its result cannot be read, or the translator cannot
-    /// turn it into SQL.
+    /// The operator reads no stored table, reads sources other than stored tables and
+    /// in-memory sequences, reads tables of more than one connection, combines rows
+    /// of different tables, its result cannot be read, or the translator cannot turn
+    /// it into SQL.
     /// </exception>
     public IReadOnlyList<object?> Values()
     {
@@ -88,13 +92,9 @@ internal sealed record TranslatedQuery
         bool oneConnection = tables.All(x =>
             ReferenceEquals(tables[0].Connection, x.Connection)
         );
-        IQueryable[] others =
-        [
-            .. roots.Where(x => x is not PostgreSqlStoredTableDataSet),
-        ];
         if (
             tables.Length == 0
-            || !(others.Length == 0 || (oneConnection && IsOneRow(others)))
+            || roots.Any(x => x is not (PostgreSqlStoredTableDataSet or EnumerableQuery))
         )
         {
             throw new NotSupportedException(
@@ -117,20 +117,6 @@ internal sealed record TranslatedQuery
                     + "from a SQL result."
             )
             : Values(tables[0].Connection, Sql(tables), reader);
-    }
-
-    /// <summary>
-    /// Whether the sources that are not stored tables are the one-element in-memory
-    /// root of one row of aggregates over the tables.
-    /// </summary>
-    private static bool IsOneRow(IReadOnlyList<IQueryable> others)
-    {
-        if (others is not [EnumerableQuery row])
-        {
-            return false;
-        }
-        IEnumerator elements = ((IEnumerable)row).GetEnumerator();
-        return elements.MoveNext() && !elements.MoveNext();
     }
 
     [UnconditionalSuppressMessage(

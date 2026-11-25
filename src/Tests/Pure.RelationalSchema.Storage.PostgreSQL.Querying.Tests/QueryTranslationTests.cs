@@ -804,7 +804,7 @@ public sealed record QueryTranslationTests : IClassFixture<QueryingFixture>, IDi
     [Fact]
     public void ThrowsWhenAQueryReadsSourcesOtherThanStoredTables()
     {
-        IQueryable<IRow> rows = Array.Empty<IRow>().AsQueryable();
+        IQueryable<IRow> rows = new ForeignRows();
 
         NotSupportedException exception = Assert.Throws<NotSupportedException>(() =>
             Customers.Concat(rows).Count()
@@ -815,6 +815,37 @@ public sealed record QueryTranslationTests : IClassFixture<QueryingFixture>, IDi
                 + "cannot be translated to SQL.",
             exception.Message
         );
+        Assert.Empty(_connection.Statements);
+    }
+
+    [Fact]
+    public void ThrowsWhenASetOperationCombinesRowsWithAnInMemorySequenceOfRows()
+    {
+        IQueryable<IRow> rows = Array.Empty<IRow>().AsQueryable();
+
+        NotSupportedException exception = Assert.Throws<NotSupportedException>(() =>
+            Customers.Concat(rows).Count()
+        );
+
+        Assert.Equal(
+            "The query operator Concat combines rows of different tables, so it cannot be "
+                + "translated to SQL.",
+            exception.Message
+        );
+        Assert.Empty(_connection.Statements);
+    }
+
+    [Fact]
+    public void LeavesAnInMemorySequenceOfRowsToTheTranslator()
+    {
+        IQueryable<IRow> rows = Array.Empty<IRow>().AsQueryable();
+
+        NotSupportedException exception = Assert.Throws<NotSupportedException>(() =>
+            Customers.Where(x => rows.Any()).Count()
+        );
+
+        Assert.Equal("The query operator Count cannot be translated to SQL.", exception.Message);
+        _ = Assert.IsType<NotSupportedException>(exception.InnerException);
         Assert.Empty(_connection.Statements);
     }
 
@@ -954,5 +985,28 @@ public sealed record QueryTranslationTests : IClassFixture<QueryingFixture>, IDi
     private static string Shout(string text)
     {
         return text.ToUpperInvariant() + "!";
+    }
+
+    /// <summary>
+    /// Rows of a query of another provider, neither a stored table nor an in-memory
+    /// sequence.
+    /// </summary>
+    private sealed class ForeignRows : IQueryable<IRow>
+    {
+        public Type ElementType => typeof(IRow);
+
+        public Expression Expression => Expression.Constant(this, typeof(IQueryable<IRow>));
+
+        public IQueryProvider Provider => throw new NotSupportedException();
+
+        public IEnumerator<IRow> GetEnumerator()
+        {
+            throw new NotSupportedException();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
     }
 }

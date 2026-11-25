@@ -9,7 +9,10 @@ namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying;
 /// as the roots they are: a member, a conversion or a call that reads no lambda
 /// parameter and whose type is a query or a sequence of rows — a captured variable
 /// of any type a table has, an indexer, a method returning a query — is evaluated,
-/// and the tree of the query it holds takes its place.
+/// and the tree of the query it holds takes its place. The query operators of
+/// <see cref="Queryable"/> and <see cref="Enumerable"/> and the PostgreSQL markers of
+/// the translator that return a query (<c>Over</c>, <c>WithRecursive</c>), which throw
+/// when called, are no captures: they stay in the tree, their arguments inlined.
 /// <para>
 /// Inlining stops where it makes no progress. A capture is kept, its arguments
 /// inlined, when the tree it gives is again a capture of a member or method already
@@ -114,7 +117,8 @@ internal sealed class CapturedQueries : ExpressionVisitor
             MemberExpression => true,
             UnaryExpression { NodeType: ExpressionType.Convert } => true,
             MethodCallExpression call => call.Method.DeclaringType != typeof(Queryable)
-                && call.Method.DeclaringType != typeof(Enumerable),
+                && call.Method.DeclaringType != typeof(Enumerable)
+                && !QueryElement.IsMarker(call),
             _ => false,
         };
     }

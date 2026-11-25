@@ -31,7 +31,7 @@ The tables must already exist with the hash-based names produced by `Pure.Relati
 
 ## Query translation
 
-The `Provider` of a `PostgreSqlStoredTableDataSet` translates the LINQ composed over it. When a query is enumerated (or a terminal operator such as `Count` or `First` runs), the whole query is translated into one `SELECT` and executed. Its sources must all be stored tables of **one connection** — the same `IDbConnection` instance; their schemas may differ.
+The `Provider` of a `PostgreSqlStoredTableDataSet` translates the LINQ composed over it. When a query is enumerated (or a terminal operator such as `Count` or `First` runs), the whole query is translated into one `SELECT` and executed. Its sources must be stored tables of **one connection** — the same `IDbConnection` instance; their schemas may differ — and, beside them, in-memory sequences (`AsQueryable()` of an array or a list, an `EnumerableQuery`), which the translator writes as `VALUES` or refuses (see [In-memory sequences](#in-memory-sequences)).
 
 Nothing runs in memory: a query that reads several connections, reads other sources, combines rows of different tables in a set operation, or uses an operator, member or result shape that cannot be translated throws `NotSupportedException` (with the translator's exception as `InnerException` when it is the translator that refused). So a join of two tables, of one schema or of two, is one `SELECT ... JOIN ...`, while a join of tables of two connections throws; call `AsEnumerable()` on each part to combine them in memory yourself.
 
@@ -80,11 +80,49 @@ var totals = customers
 
 Enumerating a table, synchronously or asynchronously, reads every row before returning the first, so queries can run on the connection inside the loop. Asynchronous enumeration over a connection that is not a `DbConnection` (a decorator, for instance) reads synchronously.
 
+### In-memory sequences
+
+An in-memory sequence of scalars or of tuples of scalars beside the stored tables is left to the translator, which writes it as a `VALUES` list: the inner sequence of `Join`, `GroupJoin` (a left join through `DefaultIfEmpty` included) or `SelectMany`, the second sequence of `Concat`, `Union`, `Intersect` or `Except`, a subquery (`labels.AsQueryable().Any(x => x.Id == ...)`, `Contains`, `Count`, `Sum`, ...) and a root of several elements created through the provider of one of the tables (`tables.Provider.CreateQuery<T>(ids.AsQueryable().Select(id => ...).Expression)`), as well as `SelectMany` from the one-element root to such a sequence. A query of them still needs a stored table, and they compare, join and combine with the columns of the cells parsed to their types (see above): `orders.Join(labels, o => long.Parse(o.Cells[id].Value.TextValue), l => l.Id, (o, l) => new { l.Label, ... })` is one `SELECT ... INNER JOIN (VALUES (...), (...)) AS t1 ("Item1", "Item2") ON ...`. What the translator refuses — an empty sequence, a sequence of rows, objects or unsigned numbers, a sequence computed from the outer element of `SelectMany` — throws `NotSupportedException` with its exception as `InnerException`, and so does a tuple of a sequence read whole, rather than member by member, which the provider cannot read.
+
+### PostgreSQL markers
+
+The translator's PostgreSQL markers for what LINQ cannot express — window functions with `PostgreSqlWindows.Over(source, partitionBy, orderBy, frame, (row, window) => ...)` and `PostgreSqlFrame`, and `WITH RECURSIVE` with `PostgreSqlRecursion.WithRecursive(seed, level => step[, maxDepth])` — run over stored tables like any query operator. They throw `NotSupportedException` when called, so a query of them is the tree a provider or a tree rewriter builds, `Expression.Call` of the marker over the expression of the source, created with `table.Provider.CreateQuery<T>(...)`; they may also stand anywhere inside a query, under `Where`, `OrderBy`, `Skip`, `Take`, `Select`, aggregates and element operators, as a captured query read in a subquery, or over a join, a grouping or an in-memory sequence. The provider keeps the call when it inlines captured queries (it never calls a marker), rewrites the cells read in every lambda of the marker — the partition, the order, the selector, the value of `Lag` and `Lead`, the aggregates over `window.Rows`, the seed and the step — into column properties, and reads the results: the element of `Over` is what its selector builds from the row of its source (a stored row included), the window functions being scalars, and the element of `WithRecursive` is that of its seed, rows of a table included. A row deeper than `maxDepth` fails the statement with PostgreSQL's error (a `PostgresException` from Npgsql), also for a query that reads only some of the rows. What the translator refuses — a window read in a subquery of the selector, a `DISTINCT` aggregate over the rows of a frame, a range of offsets over several sort keys, a step that reads the level twice, in a subquery or on the optional side of an outer join, or groups — throws `NotSupportedException` before any statement runs. `row.Cells.Count` and `row.Cells.Keys` of the level a step reads cannot be translated.
+
+```csharp
+// The rows of each customer numbered from the latest order: one statement,
+// SELECT ..., ROW_NUMBER() OVER (PARTITION BY ... ORDER BY ... DESC) ... FROM ...
+Expression<Func<IRow, object?>> customer = o => o.Cells[customerIdColumn].Value.TextValue;
+Expression<Func<IEnumerable<IRow>, IOrderedEnumerable<IRow>>> latest = rows =>
+    rows.OrderByDescending(o => DateTime.Parse(o.Cells[placedColumn].Value.TextValue, CultureInfo.InvariantCulture));
+Expression<Func<IRow, PostgreSqlWindow<IRow>, (string, long)>> numbered = (o, w) =>
+    new ValueTuple<string, long>(o.Cells[idColumn].Value.TextValue, w.RowNumber());
+MethodInfo over = new Func<
+    IQueryable<IRow>,
+    Expression<Func<IRow, object?>>?,
+    Expression<Func<IEnumerable<IRow>, IOrderedEnumerable<IRow>>>?,
+    PostgreSqlFrame?,
+    Expression<Func<IRow, PostgreSqlWindow<IRow>, (string, long)>>,
+    IQueryable<(string, long)>
+>(PostgreSqlWindows.Over).Method;
+(string, long)[] ranked = orders
+    .Provider.CreateQuery<(string, long)>(
+        Expression.Call(
+            over,
+            orders.Expression,
+            Expression.Quote(customer),
+            Expression.Quote(latest),
+            Expression.Constant(null, typeof(PostgreSqlFrame)),
+            Expression.Quote(numbered)
+        )
+    )
+    .ToArray();
+```
+
 ## Dependencies
 
 - [`Pure.RelationalSchema.Storage`](https://github.com/kudima03/Pure.RelationalSchema.Storage/tree/0.1.0-preview.8.0.0) — storage abstractions (`IStoredSchemaDataSet`, `IStoredTableDataSet`, `IRow`) that this package implements
 - [`Pure.RelationalSchema.Storage.PostgreSQL.Abstractions`](https://github.com/kudima03/Pure.RelationalSchema.Storage.PostgreSQL.Abstractions/tree/0.1.0-preview.0.1.0) — `IPostgreSqlStoredSchemaDataSet`, the interface implemented by `PostgreSqlStoredSchemaDataSet`
-- [`Linq.Expressions.Translation.PostgreSql`](https://github.com/kudima03/Linq.Expressions.Translation.PostgreSql/tree/0.1.0-preview.0.5.1) — translates LINQ expression trees into PostgreSQL `SELECT` statements
+- [`Linq.Expressions.Translation.PostgreSql`](https://github.com/kudima03/Linq.Expressions.Translation.PostgreSql/tree/0.1.0-preview.0.10.0) — translates LINQ expression trees into PostgreSQL `SELECT` statements
 - [`Pure.RelationalSchema.HashCodes`](https://github.com/kudima03/Pure.RelationalSchema.HashCodes/tree/3.3.0) — hash codes used to derive PostgreSQL object names
 - [`Pure.Primitives.Abstractions`](https://github.com/kudima03/Pure.Primitives.Abstractions/tree/4.3.0) — base interfaces for primitive types (`IString`, etc.)
 - [`Pure.Primitives`](https://github.com/kudima03/Pure.Primitives/tree/3.7.0) — concrete primitive type implementations
