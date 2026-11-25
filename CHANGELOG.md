@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-preview.0.11.1] - 2026-11-25
+
 ### Fixed
 
 - A query over a call of a query operator of a library's own (a method returning `source.Provider.CreateQuery(Call(method, ...))`) no longer evaluates the call again without end: inlining stops where it makes no progress, so the call stays in the tree, its arguments inlined, and is translated or refused with `NotSupportedException`. The same holds for two operators that call each other, an operator whose query holds its call again, and a query whose tree is a conversion of itself; an operator that refuses this provider with `NotSupportedException` when called is kept as well, and a capture kept that holds no query (a property whose query reads the property) is refused with `NotSupportedException` (#98).
