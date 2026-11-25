@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-preview.0.12.0] - 2026-11-25
+
 ### Added
 
 - In-memory sequences of scalars and tuples beside stored tables are left to the translator, which writes them as `VALUES`: the inner sequence of `Join`, `GroupJoin` and `SelectMany`, a side of `Concat`, `Union`, `Intersect` and `Except`, a subquery, a root of several elements created through the provider of a table, and `SelectMany` from the one-element root to such a sequence. A query still needs a stored table, and what the translator refuses (an empty sequence, rows, objects or unsigned numbers, a sequence computed from the outer element) throws `NotSupportedException` with its exception as `InnerException`; a tuple of a sequence read whole throws as a result shape that cannot be read.
