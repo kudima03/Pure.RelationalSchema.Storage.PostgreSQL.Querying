@@ -64,7 +64,7 @@ internal sealed class EntityExpression : ExpressionVisitor
 
     protected override Expression VisitMethodCall(MethodCallExpression node)
     {
-        if (node.Method.DeclaringType == typeof(Queryable))
+        if (node.Method.DeclaringType == typeof(Queryable) || QueryElement.IsMarker(node))
         {
             IReadOnlyDictionary<ParameterExpression, Expression> bindings =
                 QueryElement.Bindings(node);

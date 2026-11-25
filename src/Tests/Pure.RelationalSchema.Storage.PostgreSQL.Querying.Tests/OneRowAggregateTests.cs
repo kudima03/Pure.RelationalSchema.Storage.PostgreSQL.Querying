@@ -183,7 +183,7 @@ public sealed record OneRowAggregateTests : IClassFixture<QueryingFixture>, IDis
         );
 
         Assert.Equal(
-            "The query operator Select reads sources other than stored tables, so it "
+            "The query operator Select reads tables of more than one connection, so it "
                 + "cannot be translated to SQL.",
             exception.Message
         );
@@ -192,29 +192,25 @@ public sealed record OneRowAggregateTests : IClassFixture<QueryingFixture>, IDis
     }
 
     [Fact]
-    public void ThrowsWhenTheInMemoryRootHasSeveralElements()
+    public void ReadsTheAggregatesForEachElementOfARootOfSeveralElements()
     {
         int[] two = [0, 1];
         IQueryable<IRow> orders = Orders;
 
-        NotSupportedException exception = Assert.Throws<NotSupportedException>(() =>
-            Orders
-                .Provider.CreateQuery<long>(
-                    two.AsQueryable().Select(_ => orders.LongCount()).Expression
-                )
-                .ToArray()
-        );
+        long[] counts =
+        [
+            .. Orders.Provider.CreateQuery<long>(
+                two.AsQueryable().Select(x => orders.LongCount() + x).Expression
+            ),
+        ];
 
-        Assert.Equal(
-            "The query operator Select reads sources other than stored tables, so it "
-                + "cannot be translated to SQL.",
-            exception.Message
-        );
-        Assert.Empty(_connection.Statements);
+        Assert.Equal([ExpectedOrders.LongCount(), ExpectedOrders.LongCount() + 1], counts);
+        string statement = Assert.Single(_connection.Statements);
+        Assert.Contains("FROM (VALUES (", statement, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void ThrowsWhenTheOneRowReadsSourcesOtherThanStoredTables()
+    public void ThrowsWhenTheOneRowReadsAnInMemorySequenceOfRows()
     {
         IQueryable<IRow> orders = Orders;
         IQueryable<IRow> rows = Array.Empty<IRow>().AsQueryable();
@@ -224,11 +220,8 @@ public sealed record OneRowAggregateTests : IClassFixture<QueryingFixture>, IDis
                 .ToArray()
         );
 
-        Assert.Equal(
-            "The query operator Select reads sources other than stored tables, so it "
-                + "cannot be translated to SQL.",
-            exception.Message
-        );
+        Assert.Equal("The query operator Select cannot be translated to SQL.", exception.Message);
+        _ = Assert.IsType<NotSupportedException>(exception.InnerException);
         Assert.Empty(_connection.Statements);
     }
 

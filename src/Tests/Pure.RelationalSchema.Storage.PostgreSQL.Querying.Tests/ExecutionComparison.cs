@@ -48,6 +48,54 @@ internal sealed record ExecutionComparison
     }
 
     /// <summary>
+    /// The query over the stored tables returns, in any order, the elements the
+    /// computation over the enumerated rows returns: for a query of PostgreSQL
+    /// markers, which throw when called, so that the same query cannot run in
+    /// memory.
+    /// </summary>
+    public void AssertSameElements<T>(
+        Func<ExecutionTables, IQueryable<T>> stored,
+        Func<ExecutionTables, IEnumerable<T>> enumerated
+    )
+    {
+        AssertSameOutcome(
+            tables =>
+                stored(tables).AsEnumerable().Select(Canonical).Order(StringComparer.Ordinal),
+            tables => enumerated(tables).Select(Canonical).Order(StringComparer.Ordinal)
+        );
+    }
+
+    /// <summary>
+    /// The query over the stored tables returns, in the same order, the elements the
+    /// computation over the enumerated rows returns.
+    /// </summary>
+    public void AssertSameOrder<T>(
+        Func<ExecutionTables, IQueryable<T>> stored,
+        Func<ExecutionTables, IEnumerable<T>> enumerated
+    )
+    {
+        AssertSameOutcome(
+            tables => stored(tables).AsEnumerable().Select(Canonical),
+            tables => enumerated(tables).Select(Canonical)
+        );
+    }
+
+    /// <summary>
+    /// The query over the stored tables returns the value the computation over the
+    /// enumerated rows returns.
+    /// </summary>
+    public void AssertSameValue<T>(
+        Func<ExecutionTables, T> stored,
+        Func<ExecutionTables, T> enumerated
+    )
+    {
+        AssertSameOutcome(
+            tables => [Canonical(stored(tables))],
+            tables => [Canonical(enumerated(tables))]
+        );
+    }
+
+    /// <summary>
     /// The query over the stored tables throws <see cref="NotSupportedException"/>
     /// before any statement runs, where the one over the enumerated rows does not.
     /// </summary>
@@ -68,16 +116,46 @@ internal sealed record ExecutionComparison
         Assert.Empty(connection.Statements);
     }
 
+    /// <summary>
+    /// The query over the stored tables throws <see cref="NotSupportedException"/>
+    /// before any statement runs: for a query of PostgreSQL markers, which has no
+    /// outcome in memory. Returns the exception.
+    /// </summary>
+    public NotSupportedException AssertRefused<T>(
+        Func<ExecutionTables, IQueryable<T>> stored
+    )
+    {
+        using RecordingConnection connection = new RecordingConnection(
+            _fixture.Connection
+        );
+
+        NotSupportedException exception = Assert.Throws<NotSupportedException>(() =>
+            stored(ExecutionTables.Stored(_fixture, connection)).ToList()
+        );
+        Assert.Empty(connection.Statements);
+        return exception;
+    }
+
     private void AssertSameOutcome(Func<ExecutionTables, IEnumerable<string>> query)
     {
-        string[] expected = Outcome(() => query(ExecutionTables.Enumerated(_fixture)));
+        AssertSameOutcome(query, query);
+    }
+
+    private void AssertSameOutcome(
+        Func<ExecutionTables, IEnumerable<string>> stored,
+        Func<ExecutionTables, IEnumerable<string>> enumerated
+    )
+    {
+        string[] expected = Outcome(() =>
+            enumerated(ExecutionTables.Enumerated(_fixture))
+        );
 
         using RecordingConnection connection = new RecordingConnection(
             _fixture.Connection
         );
 
         string[] actual = Outcome(() =>
-            query(ExecutionTables.Stored(_fixture, connection))
+            stored(ExecutionTables.Stored(_fixture, connection))
         );
 
         Assert.Equal(expected, actual);

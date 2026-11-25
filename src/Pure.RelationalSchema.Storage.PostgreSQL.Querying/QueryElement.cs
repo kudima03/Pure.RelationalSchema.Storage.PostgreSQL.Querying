@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Linq.Expressions;
 using System.Reflection;
+using Linq.Expressions.Translation.PostgreSql;
 using Pure.RelationalSchema.Abstractions.Table;
 using Pure.RelationalSchema.HashCodes;
 using Pure.RelationalSchema.Storage.Abstractions;
@@ -16,7 +17,11 @@ namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying;
 /// <see cref="SequenceElement"/> for a grouping, or null when it is not known. The
 /// operators that return elements of their source, the <c>...By</c> ones among
 /// them, keep its element, and so does a set operation, whose sides have one
-/// element (<see cref="RowSetOperations"/> rejects rows of different tables).
+/// element (<see cref="RowSetOperations"/> rejects rows of different tables). Of
+/// the PostgreSQL markers, <c>Over</c> has the element its selector builds from the
+/// row of its source (the window functions are scalars) and <c>WithRecursive</c> the
+/// element of its seed; the rows a window is ordered by and the level a recursion
+/// step reads are sequences of the element of the source and of the seed.
 /// </summary>
 internal sealed record QueryElement
 {
@@ -65,6 +70,21 @@ internal sealed record QueryElement
     }
 
     public Expression? Value => Of(field);
+
+    /// <summary>
+    /// Whether the call is of a PostgreSQL marker of the translator that returns a
+    /// query: <see cref="PostgreSqlWindows.Over"/>, one result per row of its
+    /// source, or <c>PostgreSqlRecursion.WithRecursive</c>, the rows of its seed and
+    /// of its steps, which have the element of the seed.
+    /// </summary>
+    public static bool IsMarker(MethodCallExpression call)
+    {
+        return call.Method.DeclaringType == typeof(PostgreSqlRecursion)
+            || (
+                call.Method.DeclaringType == typeof(PostgreSqlWindows)
+                && call.Method.Name == nameof(PostgreSqlWindows.Over)
+            );
+    }
 
     public static bool IsSetOperation(MethodCallExpression call)
     {
@@ -244,7 +264,7 @@ internal sealed record QueryElement
             ConstantExpression { Value: PostgreSqlStoredTableDataSet table } =>
                 Expression.Constant(new ElementRow(table.TableSchema), typeof(IRow)),
             SequenceElement sequence => sequence.Element,
-            MethodCallExpression call when IsOperator(call) => Of(call),
+            MethodCallExpression call when IsOperator(call) || IsMarker(call) => Of(call),
             _ => null,
         };
     }
@@ -258,8 +278,10 @@ internal sealed record QueryElement
     private static Expression? Of(MethodCallExpression call)
     {
         string name = call.Method.Name;
-        return RowPreserving.Contains(name) || SetOperations.Contains(name)
-            ? Of(call.Arguments[0])
+        bool marker = IsMarker(call);
+        return marker && name == nameof(PostgreSqlWindows.Over) ? Projected(call, 4)
+            : marker || RowPreserving.Contains(name) || SetOperations.Contains(name)
+                ? Of(call.Arguments[0])
             : name switch
             {
                 nameof(Queryable.Select) => Projected(call, 1),
@@ -374,6 +396,12 @@ internal sealed record QueryElement
                 new SequenceElement(lambda.Parameters[1].Type, Of(call.Arguments[1]), null),
             ],
             (nameof(Queryable.SelectMany), 2) => [outer, Collection(call)],
+            (nameof(PostgreSqlWindows.Over), 2)
+            or (nameof(PostgreSqlRecursion.WithRecursive), 1)
+                when IsMarker(call) && lambda is not null =>
+            [
+                new SequenceElement(lambda.Parameters[0].Type, outer, null),
+            ],
             (nameof(Queryable.GroupBy), _) when lambda is { Parameters.Count: 2 } =>
             [
                 Projected(call, 1),
