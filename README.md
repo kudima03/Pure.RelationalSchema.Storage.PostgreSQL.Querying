@@ -42,9 +42,9 @@ Rows are read as cells of text, so the provider translates cell reads of the for
 | `string` | the value |
 | `int`, `ushort`, `long`, `uint`, `ulong`, `uuid` | `CAST(... AS text)` |
 | `bool` | `True` / `False` |
-| `datetime` | `MM/dd/yyyy HH:mm:ss`, composed from `EXTRACT` parts |
+| `datetime` | `MM/dd/yyyy HH:mm:ss`, then the fraction of the second when it has one (`.FFFFFFF`: `.5`, `.000001`), composed from `EXTRACT` parts and the ticks of the value |
 | `date` | `MM/dd/yyyy`, composed from `EXTRACT` parts |
-| `time` | `HH:mm`, composed from `EXTRACT` parts |
+| `time` | `HH:mm:ss`, then the fraction of the second when it has one (`.FFFFFFF`), composed from `EXTRACT` parts and the ticks of the value |
 | `double`, `float` | the shortest round-trip text, as .NET writes it: `CAST(... AS text)` with the exponent in upper case, and in plain form where .NET uses it and PostgreSQL does not (`1e15` to `1e17` for `double`, `1e6` to `1e9` for `float`) |
 | `determined_hash` | the bytes of the column, a `bytea`, decoded as UTF-8 text (`CONVERT_FROM(..., 'UTF8')`), so that a comparison, a join with or union to a text column, `Length`, `Substring`, case conversion, `Replace` or `Trim` over it are those of PostgreSQL over the text enumeration reads; PostgreSQL fails on bytes that are no UTF-8 where .NET replaces them |
 
@@ -76,7 +76,7 @@ var totals = customers
     .ToArray();
 ```
 
-`IStoredTableDataSet` is both `IQueryable<IRow>` and `IAsyncEnumerable<IRow>`, so with `System.Linq.Async` (or .NET 10's `System.Linq.AsyncEnumerable`) in scope, compose over it as `IQueryable<IRow>` to pick the translated operators. A table used inside a lambda of a query — captured as a variable of any of its types (`IQueryable<IRow>`, `IStoredTableDataSet`, `IEnumerable<IRow>` with `AsQueryable()`), read through the indexer of a schema data set, or returned by a method — is a source of the same statement.
+`IStoredTableDataSet` is both `IQueryable<IRow>` and `IAsyncEnumerable<IRow>`, so with `System.Linq.Async` (or .NET 10's `System.Linq.AsyncEnumerable`) in scope, compose over it as `IQueryable<IRow>` to pick the translated operators. A table used inside a lambda of a query — captured as a variable of any of its types (`IQueryable<IRow>`, `IStoredTableDataSet`, `IEnumerable<IRow>` with `AsQueryable()`), read through the indexer of a schema data set, or returned by a method — is a source of the same statement. A call of a query operator of its own (a method that returns `source.Provider.CreateQuery(Call(method, ...))`, or one that refuses this provider with `NotSupportedException` when called) is left in the tree, where it is refused with `NotSupportedException` like any call the translator does not know.
 
 Enumerating a table, synchronously or asynchronously, reads every row before returning the first, so queries can run on the connection inside the loop. Asynchronous enumeration over a connection that is not a `DbConnection` (a decorator, for instance) reads synchronously.
 

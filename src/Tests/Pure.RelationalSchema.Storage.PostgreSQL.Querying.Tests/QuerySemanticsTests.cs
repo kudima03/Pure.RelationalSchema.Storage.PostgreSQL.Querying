@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Linq.Expressions;
 using Pure.RelationalSchema.Abstractions.Column;
 using Pure.RelationalSchema.Storage.Abstractions;
@@ -210,11 +211,54 @@ public sealed record QuerySemanticsTests : IClassFixture<QueryingFixture>
     }
 
     [Fact]
-    public void TruncatesFractionalSecondsOfDateTimeText()
+    public void KeepsFractionalSecondsOfDateTimeText()
     {
         AssertLikeInMemory(
             Events,
-            rows => Times(rows.Where(x => x.Cells[EventId].Value.TextValue == "4"))
+            rows => Times(rows.Where(x => x.Cells[EventId].Value.TextValue != "1"))
+        );
+    }
+
+    [Theory]
+    [InlineData("1", "01/02/0999 03:04:05")]
+    [InlineData("2", "12/31/2024 23:59:59")]
+    [InlineData("3", "10/11/1970 12:00:00")]
+    [InlineData("4", "01/01/2000 10:20:30.7")]
+    [InlineData("5", "02/29/2024 00:00:00.000001")]
+    [InlineData("6", "12/31/9999 23:59:59.999999")]
+    [InlineData("7", "01/01/0001 00:00:00.12")]
+    [InlineData("8", "06/30/2024 12:34:56.123456")]
+    public void WritesDateTimeTextWithItsSecondsAndTheirFraction(string id, string text)
+    {
+        string[] translated = Times(Events.Where(x => x.Cells[EventId].Value.TextValue == id));
+        string enumerated = Events
+            .AsEnumerable()
+            .Single(x => x.Cells[EventId].Value.TextValue == id)
+            .Cells[_fixture.EventAt]
+            .Value.TextValue;
+
+        Assert.Equal([text], translated);
+        Assert.Equal(text, enumerated);
+        Assert.Equal(
+            text,
+            DateTime
+                .Parse(text, CultureInfo.InvariantCulture)
+                .ToString("MM/dd/yyyy HH:mm:ss.FFFFFFF", CultureInfo.InvariantCulture)
+        );
+    }
+
+    [Theory]
+    [InlineData("01/02/0999 03:04:05")]
+    [InlineData("01/01/2000 10:20:30.7")]
+    [InlineData("12/31/9999 23:59:59.999999")]
+    public void FiltersByDateTimeTextWithAFraction(string text)
+    {
+        AssertLikeInMemory(
+            Events,
+            rows =>
+                rows.Where(x => x.Cells[_fixture.EventAt].Value.TextValue == text)
+                    .Select(x => x.Cells[EventId].Value.TextValue)
+                    .ToArray()
         );
     }
 
