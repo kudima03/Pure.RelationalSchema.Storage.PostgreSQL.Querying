@@ -26,6 +26,11 @@ internal sealed record ColumnProperty
         [typeof(string), typeof(string)]
     )!;
 
+    private static readonly MethodInfo TrimEnd = typeof(string).GetMethod(
+        nameof(string.TrimEnd),
+        [typeof(char)]
+    )!;
+
     private static readonly MethodInfo Magnitude = typeof(Math).GetMethod(
         nameof(Math.Abs),
         [typeof(double)]
@@ -204,22 +209,24 @@ internal sealed record ColumnProperty
 
     /// <summary>
     /// The invariant general format of a date and time, <c>MM/dd/yyyy HH:mm:ss</c>,
+    /// and the fraction of its second when it has one (see <see cref="Fraction"/>),
     /// from its parts, as the translator renders no formatting of dates.
     /// </summary>
     private static Expression DateTimeText(Expression moment)
     {
         return Joined(
-            Padded(moment, Part<DateTime>(nameof(DateTime.Month)), 2),
+            Padded(Part<DateTime>(moment, nameof(DateTime.Month)), 2),
             Expression.Constant("/"),
-            Padded(moment, Part<DateTime>(nameof(DateTime.Day)), 2),
+            Padded(Part<DateTime>(moment, nameof(DateTime.Day)), 2),
             Expression.Constant("/"),
-            Padded(moment, Part<DateTime>(nameof(DateTime.Year)), 4),
+            Padded(Part<DateTime>(moment, nameof(DateTime.Year)), 4),
             Expression.Constant(" "),
-            Padded(moment, Part<DateTime>(nameof(DateTime.Hour)), 2),
+            Padded(Part<DateTime>(moment, nameof(DateTime.Hour)), 2),
             Expression.Constant(":"),
-            Padded(moment, Part<DateTime>(nameof(DateTime.Minute)), 2),
+            Padded(Part<DateTime>(moment, nameof(DateTime.Minute)), 2),
             Expression.Constant(":"),
-            Padded(moment, Part<DateTime>(nameof(DateTime.Second)), 2)
+            Padded(Part<DateTime>(moment, nameof(DateTime.Second)), 2),
+            Fraction(Part<DateTime>(moment, nameof(DateTime.Ticks)))
         );
     }
 
@@ -229,23 +236,55 @@ internal sealed record ColumnProperty
     private static Expression DateText(Expression day)
     {
         return Joined(
-            Padded(day, Part<DateOnly>(nameof(DateOnly.Month)), 2),
+            Padded(Part<DateOnly>(day, nameof(DateOnly.Month)), 2),
             Expression.Constant("/"),
-            Padded(day, Part<DateOnly>(nameof(DateOnly.Day)), 2),
+            Padded(Part<DateOnly>(day, nameof(DateOnly.Day)), 2),
             Expression.Constant("/"),
-            Padded(day, Part<DateOnly>(nameof(DateOnly.Year)), 4)
+            Padded(Part<DateOnly>(day, nameof(DateOnly.Year)), 4)
         );
     }
 
     /// <summary>
-    /// The invariant short format of a time, <c>HH:mm</c>, from its parts.
+    /// The invariant long format of a time, <c>HH:mm:ss</c>, and the fraction of its
+    /// second when it has one (see <see cref="Fraction"/>), from its parts.
     /// </summary>
     private static Expression TimeText(Expression time)
     {
         return Joined(
-            Padded(time, Part<TimeOnly>(nameof(TimeOnly.Hour)), 2),
+            Padded(Part<TimeOnly>(time, nameof(TimeOnly.Hour)), 2),
             Expression.Constant(":"),
-            Padded(time, Part<TimeOnly>(nameof(TimeOnly.Minute)), 2)
+            Padded(Part<TimeOnly>(time, nameof(TimeOnly.Minute)), 2),
+            Expression.Constant(":"),
+            Padded(Part<TimeOnly>(time, nameof(TimeOnly.Second)), 2),
+            Fraction(Part<TimeOnly>(time, nameof(TimeOnly.Ticks)))
+        );
+    }
+
+    /// <summary>
+    /// The fraction of a second of a time or a date and time, as the custom format
+    /// <c>.FFFFFFF</c> writes it (see <see cref="CellText"/>): empty text for a whole
+    /// second, otherwise the point and the ticks of the second, padded to seven
+    /// digits, without their trailing zeros. The ticks are read whole, as the
+    /// translator renders them exactly, where a millisecond part is rounded.
+    /// </summary>
+    private static ConditionalExpression Fraction(Expression ticks)
+    {
+        BinaryExpression fraction = Expression.Modulo(
+            ticks,
+            Expression.Constant(TimeSpan.TicksPerSecond)
+        );
+        return Expression.Condition(
+            Expression.Equal(fraction, Expression.Constant(0L)),
+            Empty,
+            Expression.Add(
+                Expression.Constant("."),
+                Expression.Call(
+                    Padded(fraction, 7),
+                    TrimEnd,
+                    Expression.Constant('0')
+                ),
+                Concat
+            )
         );
     }
 
@@ -284,11 +323,11 @@ internal sealed record ColumnProperty
         );
     }
 
-    private static PropertyInfo Part<
+    private static MemberExpression Part<
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] T
-    >(string name)
+    >(Expression moment, string name)
     {
-        return typeof(T).GetProperty(name)!;
+        return Expression.Property(moment, typeof(T).GetProperty(name)!);
     }
 
     private static Expression Joined(params Expression[] parts)
@@ -297,18 +336,25 @@ internal sealed record ColumnProperty
     }
 
     /// <summary>
-    /// The text of a part of a date or time, padded with zeros to the width.
+    /// The text of a part of a date or time, an <c>int</c> or a <c>long</c>, padded
+    /// with zeros to the width.
     /// </summary>
-    private static Expression Padded(Expression moment, PropertyInfo part, int width)
+    private static Expression Padded(Expression value, int width)
     {
-        MemberExpression value = Expression.Property(moment, part);
         Expression text = Stringified(value);
+        long power = 1;
+        for (int digits = 1; digits < width; digits++)
+        {
+            power *= 10;
+        }
         for (int digits = width - 1; digits >= 1; digits--)
         {
             text = Expression.Condition(
                 Expression.LessThan(
                     value,
-                    Expression.Constant((int)Math.Pow(10, digits))
+                    value.Type == typeof(long)
+                        ? Expression.Constant(power)
+                        : Expression.Constant((int)power)
                 ),
                 Expression.Add(
                     Expression.Constant(new string('0', width - digits)),
@@ -317,6 +363,7 @@ internal sealed record ColumnProperty
                 ),
                 text
             );
+            power /= 10;
         }
         return text;
     }

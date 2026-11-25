@@ -1,4 +1,5 @@
 using System.Data;
+using System.Globalization;
 using Pure.Primitives.Abstractions.String;
 using Pure.RelationalSchema.Abstractions.Column;
 using Pure.RelationalSchema.Abstractions.ColumnType;
@@ -66,6 +67,50 @@ public sealed record ColumnTypeCellTests : IClassFixture<ColumnTypeFixture>
     public void FiltersByTimeCellText()
     {
         AssertLikeEnumeration(rows => Ids(rows, _fixture.Clock, Text(_fixture.Clock)));
+    }
+
+    [Theory]
+    [InlineData("1", "03:04:05")]
+    [InlineData("2", "23:59:59.5")]
+    [InlineData("3", "00:00:00")]
+    [InlineData("8", "00:00:00.000001")]
+    [InlineData("9", "12:34:56.123456")]
+    [InlineData("10", "23:59:59.999999")]
+    [InlineData("11", "23:59:59")]
+    [InlineData("12", "07:08:09.1")]
+    public void WritesTimeTextWithItsSecondsAndTheirFraction(string id, string text)
+    {
+        IQueryable<IRow> table = Table(_fixture.Connection);
+
+        string[] translated =
+        [
+            .. table
+                .Where(x => x.Cells[_fixture.Id].Value.TextValue == id)
+                .Select(x => x.Cells[_fixture.Clock].Value.TextValue),
+        ];
+        string enumerated = table
+            .AsEnumerable()
+            .Single(x => x.Cells[_fixture.Id].Value.TextValue == id)
+            .Cells[_fixture.Clock]
+            .Value.TextValue;
+
+        Assert.Equal([text], translated);
+        Assert.Equal(text, enumerated);
+        Assert.Equal(
+            text,
+            TimeOnly
+                .Parse(text, CultureInfo.InvariantCulture)
+                .ToString("HH:mm:ss.FFFFFFF", CultureInfo.InvariantCulture)
+        );
+    }
+
+    [Theory]
+    [InlineData("23:59:59.5")]
+    [InlineData("00:00:00.000001")]
+    [InlineData("23:59:59")]
+    public void FiltersByTimeTextWithAFraction(string text)
+    {
+        AssertLikeEnumeration(rows => Ids(rows, _fixture.Clock, text));
     }
 
     [Fact]

@@ -19,7 +19,10 @@ using Table = Table.Table;
 /// <c>Children</c> share keys that are NULL, empty, repeated or unmatched; and
 /// <c>Entries</c> of a second schema on the same connection has such keys too.
 /// <c>Extras</c> has a column of each of the other types. Only the rows whose id
-/// starts with 9 hold NULL cells. <c>Archive</c> is a third schema holding the
+/// starts with 9 hold NULL cells. The <c>datetime</c> cells of <c>Values</c> and
+/// the <c>time</c> cells of <c>Extras</c> hold whole seconds and fractions of a
+/// second, from the first to the last microsecond of a day, some written with
+/// trailing zeros. <c>Archive</c> is a third schema holding the
 /// <c>Parents</c> table again, with rows of its own.
 /// </summary>
 public sealed record ExecutionFixture : IDisposable
@@ -184,6 +187,78 @@ public sealed record ExecutionFixture : IDisposable
                 "7",
                 "NULL",
                 "'1970-01-01 00:00:00.000001'",
+            ],
+            [
+                "7",
+                "'plain'",
+                "true",
+                "0",
+                "0",
+                "0",
+                "0",
+                "0",
+                "'00000000-0000-0000-0000-000000000000'",
+                "'2024-02-29 23:59:59'",
+            ],
+            [
+                "8",
+                "'plain'",
+                "true",
+                "0",
+                "0",
+                "0",
+                "0",
+                "0",
+                "'00000000-0000-0000-0000-000000000000'",
+                "'2024-12-31 12:34:56.120'",
+            ],
+            [
+                "10",
+                "'plain'",
+                "true",
+                "0",
+                "0",
+                "0",
+                "0",
+                "0",
+                "'00000000-0000-0000-0000-000000000000'",
+                "'0001-01-01 00:00:00.000001'",
+            ],
+            [
+                "11",
+                "'plain'",
+                "true",
+                "0",
+                "0",
+                "0",
+                "0",
+                "0",
+                "'00000000-0000-0000-0000-000000000000'",
+                "'2000-06-15 08:09:10.00001'",
+            ],
+            [
+                "12",
+                "'plain'",
+                "true",
+                "0",
+                "0",
+                "0",
+                "0",
+                "0",
+                "'00000000-0000-0000-0000-000000000000'",
+                "'9999-12-31 23:59:59'",
+            ],
+            [
+                "13",
+                "'plain'",
+                "true",
+                "0",
+                "0",
+                "0",
+                "0",
+                "0",
+                "'00000000-0000-0000-0000-000000000000'",
+                "'1999-12-31 23:59:59.9'",
             ]
         );
         TestSchema.Insert(
@@ -213,6 +288,14 @@ public sealed record ExecutionFixture : IDisposable
             Extras,
             ["1", "'2024-02-29'", "'03:04:05'", "0.1", "0.1", "decode('616263', 'hex')"],
             ["2", "'0999-12-31'", "'23:59:59.5'", "1e15", "1e6", "decode('c3a9', 'hex')"],
+            ["3", "'2024-01-01'", "'00:00:00'", "3", "3", "decode('64', 'hex')"],
+            ["4", "'2024-01-02'", "'23:59:59.999999'", "4", "4", "decode('65', 'hex')"],
+            ["5", "'2024-01-03'", "'12:00:00.100'", "5", "5", "decode('66', 'hex')"],
+            ["6", "'2024-01-04'", "'00:00:00.000001'", "6", "6", "decode('67', 'hex')"],
+            ["7", "'2024-01-05'", "'07:08:09.120000'", "7", "7", "decode('68', 'hex')"],
+            ["8", "'2024-01-06'", "'23:59:59'", "8", "8", "decode('69', 'hex')"],
+            ["10", "'2024-01-07'", "'13:14:15.00001'", "10", "10", "decode('6a', 'hex')"],
+            ["11", "'2024-01-08'", "'00:00:59.999'", "11", "11", "decode('6b', 'hex')"],
             ["91", "NULL", "NULL", "NULL", "NULL", "NULL"]
         );
         TestSchema.Insert(

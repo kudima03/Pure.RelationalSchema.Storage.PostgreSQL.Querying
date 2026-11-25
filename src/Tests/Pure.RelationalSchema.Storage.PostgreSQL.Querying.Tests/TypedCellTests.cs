@@ -9,8 +9,7 @@ namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying.Tests;
 /// and the like, bare or guarded by <c>string.IsNullOrEmpty</c>, is read as the
 /// column itself: the statement compares, joins and projects the column, with no
 /// text in between, and returns what the same query returns over the enumerated
-/// rows. The datetime and time cells compared with enumeration hold whole seconds
-/// and minutes, as the cell text keeps no more while the column is read whole.
+/// rows, fractions of a second included.
 /// </summary>
 public sealed record TypedCellTests : IClassFixture<ExecutionFixture>
 {
@@ -85,11 +84,8 @@ public sealed record TypedCellTests : IClassFixture<ExecutionFixture>
     [Fact]
     public void ReadsParsedDateAndTimeCellsAsTheirValues()
     {
-        string[] whole = ["1", "2", "6"];
-
         AssertLikeEnumeration(db =>
-            db
-                .Values.Where(x => whole.Contains(x.Cells[ValueId].Value.TextValue))
+            WithoutNull(db.Values, ValueId)
                 .Select(x => new ValueTuple<string, DateTime>(
                     x.Cells[ValueId].Value.TextValue,
                     DateTime.Parse(
@@ -101,7 +97,7 @@ public sealed record TypedCellTests : IClassFixture<ExecutionFixture>
         );
         AssertLikeEnumeration(db =>
             WithoutNull(db.Extras, ExtraId)
-                .Select(x => new ValueTuple<string, DateOnly, bool>(
+                .Select(x => new ValueTuple<string, DateOnly, TimeOnly>(
                     x.Cells[ExtraId].Value.TextValue,
                     DateOnly.Parse(
                         x.Cells[Day].Value.TextValue,
@@ -110,7 +106,7 @@ public sealed record TypedCellTests : IClassFixture<ExecutionFixture>
                     TimeOnly.Parse(
                         x.Cells[Clock].Value.TextValue,
                         CultureInfo.InvariantCulture
-                    ) >= new TimeOnly(3, 4)
+                    )
                 ))
         );
     }
