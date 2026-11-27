@@ -84,7 +84,8 @@ public sealed record CapturedValueEdgeTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING: the translator refuses the Value of a null captured int? in "
+        Skip = "#111 (translator #148): the translator refuses the Value of a null "
+            + "captured int? in "
             + "the branch of a conditional its constant test never takes "
             + "(DeferredConstant.Value is not supported), where .NET gives null."
     )]
