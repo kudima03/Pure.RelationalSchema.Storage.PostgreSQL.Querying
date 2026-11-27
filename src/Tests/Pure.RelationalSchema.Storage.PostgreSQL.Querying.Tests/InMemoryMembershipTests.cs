@@ -361,7 +361,7 @@ public sealed record InMemoryMembershipTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING translator: Enumerable.All over a captured array is refused "
+        Skip = "#111 (translator #138): Enumerable.All over a captured array is refused "
             + "(The method 'Enumerable.All' is not supported); its Queryable form is not."
     )]
     public void FiltersByAllOfAnArrayDifferingFromTheRow()
@@ -377,7 +377,7 @@ public sealed record InMemoryMembershipTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING translator: Enumerable.All over a captured array is refused "
+        Skip = "#111 (translator #138): Enumerable.All over a captured array is refused "
             + "(The method 'Enumerable.All' is not supported); its Queryable form is not."
     )]
     public void FiltersByAllOfAnEmptyArray()
@@ -415,7 +415,7 @@ public sealed record InMemoryMembershipTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING translator: Enumerable.Count over a captured array is refused "
+        Skip = "#111 (translator #138): Enumerable.Count over a captured array is refused "
             + "(The method 'Enumerable.Count' is not supported); its Queryable form is "
             + "not."
     )]
@@ -432,7 +432,7 @@ public sealed record InMemoryMembershipTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING translator: Enumerable.Where over a captured array is refused "
+        Skip = "#111 (translator #138): Enumerable.Where over a captured array is refused "
             + "(The method 'Enumerable.Where' is not supported); its Queryable form is "
             + "not."
     )]
@@ -449,7 +449,7 @@ public sealed record InMemoryMembershipTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING translator: Enumerable.Where over a captured array is refused "
+        Skip = "#111 (translator #138): Enumerable.Where over a captured array is refused "
             + "(The method 'Enumerable.Where' is not supported); its Queryable form is "
             + "not."
     )]
@@ -467,7 +467,7 @@ public sealed record InMemoryMembershipTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING translator: Enumerable.Where over a captured array is refused "
+        Skip = "#111 (translator #138): Enumerable.Where over a captured array is refused "
             + "(The method 'Enumerable.Where' is not supported); its Queryable form is "
             + "not."
     )]
@@ -500,7 +500,7 @@ public sealed record InMemoryMembershipTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING translator: Enumerable.Where over a captured array is refused "
+        Skip = "#111 (translator #138): Enumerable.Where over a captured array is refused "
             + "(The method 'Enumerable.Where' is not supported); its Queryable form is "
             + "not."
     )]
@@ -687,7 +687,7 @@ public sealed record InMemoryMembershipTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING translator: Contains of a tuple in an in-memory sequence of "
+        Skip = "#111 (translator #139): Contains of a tuple in an in-memory sequence of "
             + "tuples is refused (Entities and projections cannot be used where a single "
             + "value is required)."
     )]
@@ -709,7 +709,7 @@ public sealed record InMemoryMembershipTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING translator: Contains of a tuple in an in-memory sequence of "
+        Skip = "#111 (translator #139): Contains of a tuple in an in-memory sequence of "
             + "tuples is refused (Entities and projections cannot be used where a single "
             + "value is required)."
     )]
@@ -764,7 +764,7 @@ public sealed record InMemoryMembershipTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING translator: Enumerable.Contains over ToList() of a stored "
+        Skip = "#111 (translator #138): Enumerable.Contains over ToList() of a stored "
             + "subquery is refused (The method 'Queryable.Select' is not supported), "
             + "though it is the IN of that subquery."
     )]
@@ -782,7 +782,7 @@ public sealed record InMemoryMembershipTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING: a stored query captured as IEnumerable<long> is not inlined "
+        Skip = "#111: a stored query captured as IEnumerable<long> is not inlined "
             + "by CapturedQueries (only queries and IEnumerable<IRow> are), so the "
             + "translator meets its raw cells (The property 'IRow.Cells' cannot be "
             + "mapped)."

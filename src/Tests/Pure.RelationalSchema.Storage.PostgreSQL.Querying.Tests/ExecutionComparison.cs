@@ -159,7 +159,7 @@ internal sealed record ExecutionComparison
         );
 
         Assert.Equal(expected, actual);
-        if (!expected[0].StartsWith(Thrown, StringComparison.Ordinal))
+        if (expected is not [string only] || !only.StartsWith(Thrown, StringComparison.Ordinal))
         {
             _ = Assert.Single(connection.Statements);
         }

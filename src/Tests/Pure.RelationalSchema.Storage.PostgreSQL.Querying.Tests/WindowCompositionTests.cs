@@ -14,7 +14,7 @@ internal sealed record RankedRow(IRow Row, long Number, double Percent);
 /// <summary>
 /// The window values of a row, read through an initializer after a constructor.
 /// </summary>
-internal sealed record RankedValue(long Id)
+internal sealed record InitializedRank(long Id)
 {
     public long Rank { get; init; }
 
@@ -1332,7 +1332,7 @@ public sealed record WindowCompositionTests : IClassFixture<ExecutionFixture>
                     rows => rows.OrderBy(x => x.Big).ThenBy(x => x.Id),
                     null,
                     (x, w) =>
-                        new RankedValue(x.Id)
+                        new InitializedRank(x.Id)
                         {
                             Rank = w.Rank(),
                             Previous = w.Lag(row => (long?)row.Id, 1, null),
@@ -1347,7 +1347,7 @@ public sealed record WindowCompositionTests : IClassFixture<ExecutionFixture>
                         rows => rows.OrderBy(x => x.Big).ThenBy(x => x.Id),
                         x => (x.Big, x.Id)
                     )
-                    .Select(x => new RankedValue(x.Row.Id)
+                    .Select(x => new InitializedRank(x.Row.Id)
                     {
                         Rank = x.Window.Rank,
                         Previous = x.Window.Lag(row => (long?)row.Id, 1, null),
@@ -1368,7 +1368,7 @@ public sealed record WindowCompositionTests : IClassFixture<ExecutionFixture>
                         rows => rows.OrderByDescending(x => x.Id),
                         null,
                         (x, w) =>
-                            new RankedValue(x.Id)
+                            new InitializedRank(x.Id)
                             {
                                 Id = w.RowNumber(),
                                 Rank = x.Id,
@@ -1389,7 +1389,7 @@ public sealed record WindowCompositionTests : IClassFixture<ExecutionFixture>
                         rows => rows.OrderByDescending(x => x.Id),
                         x => x.Id
                     )
-                    .Select(x => new RankedValue(x.Row.Id)
+                    .Select(x => new InitializedRank(x.Row.Id)
                     {
                         Id = x.Window.RowNumber,
                         Rank = x.Row.Id,
@@ -1414,7 +1414,7 @@ public sealed record WindowCompositionTests : IClassFixture<ExecutionFixture>
                     null,
                     rows => rows.OrderBy(x => x.Id),
                     null,
-                    (x, w) => new RankedValue(x.Id) { Id = (w.RowNumber() * 100) + x.Id }
+                    (x, w) => new InitializedRank(x.Id) { Id = (w.RowNumber() * 100) + x.Id }
                 ),
             db =>
                 InMemoryWindow<EdgeItem>
@@ -1424,7 +1424,7 @@ public sealed record WindowCompositionTests : IClassFixture<ExecutionFixture>
                         rows => rows.OrderBy(x => x.Id),
                         x => x.Id
                     )
-                    .Select(x => new RankedValue(x.Row.Id)
+                    .Select(x => new InitializedRank(x.Row.Id)
                     {
                         Id = (x.Window.RowNumber * 100) + x.Row.Id,
                     })

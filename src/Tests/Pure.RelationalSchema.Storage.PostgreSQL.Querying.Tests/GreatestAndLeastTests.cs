@@ -293,7 +293,7 @@ public sealed record GreatestAndLeastTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING: GREATEST and LEAST of DateTimes of the kinds Utc and"
+        Skip = "#111 (translator #129): GREATEST and LEAST of DateTimes of the kinds Utc and"
             + " Unspecified give the kind of neither value: a Utc constant is a TIMESTAMP"
             + " (read Unspecified), a Utc value built from parts a timestamptz that makes"
             + " the result one (read Utc)."
@@ -388,7 +388,7 @@ public sealed record GreatestAndLeastTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING: GREATEST in the \"C\" collation compares code points, where"
+        Skip = "#111 (translator #133): GREATEST in the \"C\" collation compares code points, where"
             + " StringComparer.Ordinal compares UTF-16 code units: a character above"
             + " U+FFFF orders after U+E000..U+FFFF in SQL, before them in .NET."
     )]
@@ -432,7 +432,7 @@ public sealed record GreatestAndLeastTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING: GREATEST skips a NULL cell parsed bare, which .NET fails to"
+        Skip = "#111: GREATEST skips a NULL cell parsed bare, which .NET fails to"
             + " parse (FormatException); the query returns the other value."
     )]
     public void FailsOnTheGreatestOfANullCellParsedBare()

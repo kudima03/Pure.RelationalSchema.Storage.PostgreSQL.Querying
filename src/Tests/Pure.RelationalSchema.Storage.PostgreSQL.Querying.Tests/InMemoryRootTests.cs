@@ -216,7 +216,7 @@ public sealed record InMemoryRootTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING translator: OrderBy over VALUES is not stable, ties come back in "
+        Skip = "#111 (translator #134): OrderBy over VALUES is not stable, ties come back in "
             + "the order the sort leaves them, where LINQ to Objects keeps the sequence "
             + "order."
     )]
@@ -240,7 +240,7 @@ public sealed record InMemoryRootTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING translator: OrderBy over VALUES is not stable, ties come back in "
+        Skip = "#111 (translator #134): OrderBy over VALUES is not stable, ties come back in "
             + "the order the sort leaves them, where LINQ to Objects keeps the sequence "
             + "order."
     )]

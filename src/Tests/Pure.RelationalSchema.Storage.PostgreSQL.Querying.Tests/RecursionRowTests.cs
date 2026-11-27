@@ -381,7 +381,7 @@ public sealed record RecursionRowTests : IClassFixture<ExecutionFixture>
     // The seed has a row for every element, the step finds none for some: those
     // elements of the walk hold no row, as in memory, not a row of empty cells.
     [Fact(
-        Skip = "PENDING: the walk is read with the element of its seed only "
+        Skip = "#111: the walk is read with the element of its seed only "
             + "(QueryElement.Of), whose row is not optional, so a row the step's "
             + "DefaultIfEmpty finds none for is read as a row of empty cells, not null"
     )]
@@ -416,7 +416,7 @@ public sealed record RecursionRowTests : IClassFixture<ExecutionFixture>
 
     // The first walk has a row for every element, the second none for some.
     [Fact(
-        Skip = "PENDING: a set operation is read with the element of its first side "
+        Skip = "#111: a set operation is read with the element of its first side "
             + "only (QueryElement.Of), whose row is not optional, so the missing rows "
             + "of the second side are read as rows of empty cells, not null"
     )]
@@ -442,7 +442,7 @@ public sealed record RecursionRowTests : IClassFixture<ExecutionFixture>
 
     // The same without a walk: the second side of a concatenation of stored rows.
     [Fact(
-        Skip = "PENDING: a set operation is read with the element of its first side "
+        Skip = "#111: a set operation is read with the element of its first side "
             + "only (QueryElement.Of), whose row is not optional, so the missing rows "
             + "of the second side are read as rows of empty cells, not null"
     )]

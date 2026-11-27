@@ -818,7 +818,7 @@ public sealed record InMemorySequenceCompositionTests : IClassFixture<ExecutionF
     }
 
     [Fact(
-        Skip = "PENDING translator: COLLATE \"C\" orders code points, StringComparer."
+        Skip = "#111 (translator #133): COLLATE \"C\" orders code points, StringComparer."
             + "Ordinal UTF-16 code units, so U+FF41 sorts before an astral character "
             + "there."
     )]
@@ -834,7 +834,7 @@ public sealed record InMemorySequenceCompositionTests : IClassFixture<ExecutionF
     }
 
     [Fact(
-        Skip = "PENDING translator: OrderBy of text without a comparer sorts by the "
+        Skip = "#111 (translator #133): OrderBy of text without a comparer sorts by the "
             + "database collation (glibc), not by the culture LINQ to Objects compares "
             + "with (ICU), so leading spaces and emoji sort differently."
     )]
@@ -850,7 +850,7 @@ public sealed record InMemorySequenceCompositionTests : IClassFixture<ExecutionF
     }
 
     [Fact(
-        Skip = "PENDING translator: PostgreSQL sorts NaN above +Infinity, LINQ to "
+        Skip = "#111 (translator #132): PostgreSQL sorts NaN above +Infinity, LINQ to "
             + "Objects below -Infinity, and the ORDER BY does not place it."
     )]
     public void OrdersInMemoryDoublesWithTheSpecialValues()
@@ -1141,7 +1141,7 @@ public sealed record InMemorySequenceCompositionTests : IClassFixture<ExecutionF
     }
 
     [Theory(
-        Skip = "PENDING translator: a one-element in-memory query is taken for the "
+        Skip = "#111 (translator #137): a one-element in-memory query is taken for the "
             + "one-row root (Translator.Root/OneRow) wherever it is, and its element "
             + "refused."
     )]
@@ -1163,7 +1163,7 @@ public sealed record InMemorySequenceCompositionTests : IClassFixture<ExecutionF
     }
 
     [Fact(
-        Skip = "PENDING translator: a one-element in-memory query is taken for the "
+        Skip = "#111 (translator #137): a one-element in-memory query is taken for the "
             + "one-row root (Translator.Root/OneRow) wherever it is, and its element "
             + "refused."
     )]
@@ -1183,7 +1183,7 @@ public sealed record InMemorySequenceCompositionTests : IClassFixture<ExecutionF
     }
 
     [Fact(
-        Skip = "PENDING translator: a one-element in-memory query is taken for the "
+        Skip = "#111 (translator #137): a one-element in-memory query is taken for the "
             + "one-row root (Translator.Root/OneRow) wherever it is, and its element "
             + "refused."
     )]
@@ -1201,7 +1201,7 @@ public sealed record InMemorySequenceCompositionTests : IClassFixture<ExecutionF
     }
 
     [Fact(
-        Skip = "PENDING translator: a one-element in-memory query is taken for the "
+        Skip = "#111 (translator #137): a one-element in-memory query is taken for the "
             + "one-row root (Translator.Root/OneRow) wherever it is, and its element "
             + "refused."
     )]
@@ -1219,7 +1219,7 @@ public sealed record InMemorySequenceCompositionTests : IClassFixture<ExecutionF
     }
 
     [Fact(
-        Skip = "PENDING translator: a one-element in-memory query is taken for the "
+        Skip = "#111 (translator #137): a one-element in-memory query is taken for the "
             + "one-row root (Translator.Root/OneRow) wherever it is, and its element "
             + "refused."
     )]
@@ -1237,7 +1237,7 @@ public sealed record InMemorySequenceCompositionTests : IClassFixture<ExecutionF
     }
 
     [Fact(
-        Skip = "PENDING translator: a one-element in-memory query is taken for the "
+        Skip = "#111 (translator #137): a one-element in-memory query is taken for the "
             + "one-row root (Translator.Root/OneRow) wherever it is, and its element "
             + "refused."
     )]

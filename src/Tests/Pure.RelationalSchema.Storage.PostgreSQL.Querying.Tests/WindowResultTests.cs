@@ -491,7 +491,7 @@ public sealed record WindowResultTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING: translator refuses Queryable.DefaultIfEmpty as the source of "
+        Skip = "#111 (translator #141): translator refuses Queryable.DefaultIfEmpty as the source of "
             + "Over (\"The method 'Queryable.DefaultIfEmpty' is not supported.\"), "
             + "though it translates DefaultIfEmpty before an aggregate"
     )]

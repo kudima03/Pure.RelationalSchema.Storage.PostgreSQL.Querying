@@ -395,7 +395,7 @@ public sealed record ProviderRootTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING: UnionBy of rows of two tables of one width runs and reads "
+        Skip = "#111: UnionBy of rows of two tables of one width runs and reads "
             + "the Entries row 92 as a row of Parents: RowSetOperations checks "
             + "Concat, Union, Intersect and Except only "
             + "(QueryElement.IsSetOperation leaves UnionBy out)."
@@ -408,7 +408,7 @@ public sealed record ProviderRootTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING: UnionBy of rows of Parents and Children is not refused "
+        Skip = "#111: UnionBy of rows of Parents and Children is not refused "
             + "(QueryElement.IsSetOperation leaves UnionBy out) and fails on the "
             + "server with PostgresException 42601: each UNION query must have the "
             + "same number of columns."

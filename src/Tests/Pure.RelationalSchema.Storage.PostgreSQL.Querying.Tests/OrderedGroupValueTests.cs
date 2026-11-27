@@ -81,7 +81,7 @@ public sealed record OrderedGroupValueTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING: First of a group sorted by keys that tie takes any of the tied"
+        Skip = "#111 (translator #134): First of a group sorted by keys that tie takes any of the tied"
             + " elements (ARRAY_AGG(... ORDER BY key) does not sort stably), where .NET"
             + " takes the first in the order of the source."
     )]
@@ -102,7 +102,7 @@ public sealed record OrderedGroupValueTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING: Last of a group sorted by keys that tie is the first element of"
+        Skip = "#111 (translator #134): Last of a group sorted by keys that tie is the first element of"
             + " ARRAY_AGG in the inverted order, any of the tied elements (even a stable"
             + " sort would give the first of them), where .NET takes the last in the order"
             + " of the source."

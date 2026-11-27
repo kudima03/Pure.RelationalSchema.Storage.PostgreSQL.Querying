@@ -318,7 +318,7 @@ public sealed record WindowEdgeTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING: translator orders a double ascending with NaN last, as "
+        Skip = "#111 (translator #132): translator orders a double ascending with NaN last, as "
             + "PostgreSQL does (NaN above every number), where .NET's order puts NaN "
             + "first (below negative infinity); ORDER BY of the window needs NaN handled"
     )]
@@ -381,7 +381,7 @@ public sealed record WindowEdgeTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING: translator sorts StringComparer.Ordinal with COLLATE \"C\", "
+        Skip = "#111 (translator #133): translator sorts StringComparer.Ordinal with COLLATE \"C\", "
             + "by UTF-8 bytes (code points), where .NET's ordinal order compares UTF-16 "
             + "code units, so a surrogate pair sorts before U+E000..U+FFFF in .NET and "
             + "after them in PostgreSQL"
@@ -1190,7 +1190,7 @@ public sealed record WindowEdgeTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING: translator writes Average of long as AVG(CAST(x AS double "
+        Skip = "#111 (translator #140): translator writes Average of long as AVG(CAST(x AS double "
             + "precision)), rounding each value before summing, where .NET sums the "
             + "longs exactly and divides once: the frame of long.MinValue and "
             + "long.MaxValue averages 0 instead of -0.5"
@@ -1246,7 +1246,7 @@ public sealed record WindowEdgeTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING: EntityExpression binds the lambda parameters of Over itself "
+        Skip = "#111: EntityExpression binds the lambda parameters of Over itself "
             + "only, not those of the window functions (Lag, FirstValue) nor of the "
             + "Enumerable operators over w.Rows, so row.Cells.Count there throws "
             + "NotSupportedException in EntityExpression.Columns"
@@ -1290,7 +1290,7 @@ public sealed record WindowEdgeTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING: EntityExpression does not bind the parameter of the key "
+        Skip = "#111: EntityExpression does not bind the parameter of the key "
             + "selector of OrderBy over the rows of a window (an Enumerable call), so "
             + "row.Cells.Count there throws NotSupportedException in "
             + "EntityExpression.Columns"
@@ -1418,7 +1418,7 @@ public sealed record WindowEdgeTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING: translator writes the double -0.0 as the integer literal -0, "
+        Skip = "#111 (translator #131): translator writes the double -0.0 as the integer literal -0, "
             + "in VALUES and as a constant (here the default of LAG), so PostgreSQL "
             + "reads 0 and the sign of the zero is lost"
     )]

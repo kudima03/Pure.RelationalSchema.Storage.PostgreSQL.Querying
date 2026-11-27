@@ -385,7 +385,7 @@ public sealed record StringJoinTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING: string.Join of the distinct values of an unordered group joins"
+        Skip = "#111 (translator #134): string.Join of the distinct values of an unordered group joins"
             + " them sorted by STRING_AGG(DISTINCT ...), not in the order of their first"
             + " occurrence as .NET does."
     )]
@@ -511,7 +511,7 @@ public sealed record StringJoinTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING: string.Join of the distinct values of an unordered subquery joins"
+        Skip = "#111 (translator #134): string.Join of the distinct values of an unordered subquery joins"
             + " them in another order than that of their first occurrence."
     )]
     public void JoinsTheDistinctTextsOfASubqueryInTheOrderOfTheirFirstOccurrence()

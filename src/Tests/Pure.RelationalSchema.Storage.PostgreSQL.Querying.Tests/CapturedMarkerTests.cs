@@ -510,7 +510,7 @@ public sealed record CapturedMarkerTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING: a query captured as IEnumerable<T>, T not IRow, is not "
+        Skip = "#111: a query captured as IEnumerable<T>, T not IRow, is not "
             + "inlined (CapturedQueries.IsQuery checks the static type), so the "
             + "translator evaluates it and refuses the marker it holds (The method "
             + "'PostgreSqlWindows.Over' is not supported)."
@@ -530,7 +530,7 @@ public sealed record CapturedMarkerTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING: a query captured as IEnumerable<T>, T not IRow, is not "
+        Skip = "#111: a query captured as IEnumerable<T>, T not IRow, is not "
             + "inlined (CapturedQueries.IsQuery checks the static type), so the "
             + "translator evaluates it and fails on its cells (The property "
             + "'IRow.Cells' cannot be mapped to a column)."
@@ -551,7 +551,7 @@ public sealed record CapturedMarkerTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING: an invoked delegate returning a query "
+        Skip = "#111: an invoked delegate returning a query "
             + "(InvocationExpression) is no capture for CapturedQueries.IsCapture, "
             + "so the translator evaluates it and fails on its cells (The property "
             + "'IRow.Cells' cannot be mapped to a column)."
@@ -572,7 +572,7 @@ public sealed record CapturedMarkerTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING: the translator refuses Enumerable.Any over the stored table "
+        Skip = "#111 (translator #138): the translator refuses Enumerable.Any over the stored table "
             + "inlined from an IEnumerable<IRow> capture (The method "
             + "'Enumerable.Any' is not supported)."
     )]
@@ -593,7 +593,7 @@ public sealed record CapturedMarkerTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING: the translator refuses AsQueryable over a query that is not "
+        Skip = "#111 (translator #138): the translator refuses AsQueryable over a query that is not "
             + "a root (The method 'Queryable.AsQueryable' is not supported)."
     )]
     public void FiltersRowsByAQueryOfRowsConvertedToAnEnumerableOfRows()
@@ -625,7 +625,7 @@ public sealed record CapturedMarkerTests : IClassFixture<ExecutionFixture>
     // Whether or not the translator reads the conversion, the provider must keep the
     // marker in the tree and never call it, so that a refusal is the provider's own.
     [Fact(
-        Skip = "PENDING: CapturedQueries evaluates a Convert of a marker query to "
+        Skip = "#111: CapturedQueries evaluates a Convert of a marker query to "
             + "IEnumerable<IRow> and so calls PostgreSqlWindows.Over, whose own "
             + "exception escapes unwrapped ('PostgreSqlWindows.Over' marks "
             + "PostgreSQL's SQL ... it cannot be called): Evaluated catches "
@@ -661,7 +661,7 @@ public sealed record CapturedMarkerTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING: a lambda held in a variable (a member, not a Quote) of a "
+        Skip = "#111: a lambda held in a variable (a member, not a Quote) of a "
             + "compiler-built tree is not inlined by CapturedQueries, so "
             + "EntityExpression never rewrites its cells and the translator refuses "
             + "the call (The method 'PostgreSqlWindows.Over' is not supported)."

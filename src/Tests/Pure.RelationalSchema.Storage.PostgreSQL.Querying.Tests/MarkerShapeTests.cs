@@ -240,7 +240,7 @@ public sealed record MarkerShapeTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING: the translator refuses DefaultIfEmpty() as a sequence "
+        Skip = "#111 (translator #141): the translator refuses DefaultIfEmpty() as a sequence "
             + "operator, with or without a marker (The method "
             + "'Queryable.DefaultIfEmpty' is not supported)."
     )]
@@ -266,7 +266,7 @@ public sealed record MarkerShapeTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING: the translator refuses DefaultIfEmpty() as a sequence "
+        Skip = "#111 (translator #141): the translator refuses DefaultIfEmpty() as a sequence "
             + "operator, with or without a marker (The method "
             + "'Queryable.DefaultIfEmpty' is not supported)."
     )]
@@ -404,7 +404,7 @@ public sealed record MarkerShapeTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING: row.Cells.Count in an Enumerable operator over the group of "
+        Skip = "#111: row.Cells.Count in an Enumerable operator over the group of "
             + "a GroupJoin is refused (Specified method is not supported, from "
             + "EntityExpression.Columns): EntityExpression binds the lambdas of "
             + "Queryable operators and markers only; a plain GroupJoin fails the "
@@ -509,7 +509,7 @@ public sealed record MarkerShapeTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING: the translator refuses ElementAt(Index) counted from the "
+        Skip = "#111 (translator #141): the translator refuses ElementAt(Index) counted from the "
             + "end, with or without a marker (The method 'Queryable.ElementAt' is "
             + "not supported)."
     )]
@@ -1034,7 +1034,7 @@ public sealed record MarkerShapeTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING: Cells.Count of the missing row of a left join is the "
+        Skip = "#111: Cells.Count of the missing row of a left join is the "
             + "constant 4 (SELECT 4 ... LEFT JOIN ...) where LINQ to Objects throws "
             + "NullReferenceException: EntityExpression.Columns ignores "
             + "ElementRow.IsOptional."
@@ -1195,7 +1195,7 @@ public sealed record MarkerShapeTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING: a stored query other than a table held by a "
+        Skip = "#111: a stored query other than a table held by a "
             + "ConstantExpression is not inlined (CapturedQueries.IsCapture leaves "
             + "constants out), so TranslatedQuery refuses it as a source other than "
             + "stored tables."

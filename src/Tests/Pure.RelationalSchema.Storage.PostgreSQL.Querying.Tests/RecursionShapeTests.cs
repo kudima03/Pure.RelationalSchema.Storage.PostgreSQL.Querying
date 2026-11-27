@@ -450,7 +450,7 @@ public sealed record RecursionShapeTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING: translator matches the step's columns to the seed's "
+        Skip = "#111 (translator #142): translator matches the step's columns to the seed's "
             + "case-insensitively (Translator.Stepped), so members Id and ID throw "
             + "ArgumentException 'An item with the same key has already been added. "
             + "Key: ID'"
@@ -1076,7 +1076,7 @@ public sealed record RecursionShapeTests : IClassFixture<ExecutionFixture>
     // PostgreSQL types the column by the seed, real, and fails the statement where
     // the step yields another type for it.
     [Fact(
-        Skip = "PENDING: translator renders the float constant of x.Ratio + 0.5f as "
+        Skip = "#111 (translator #131): translator renders the float constant of x.Ratio + 0.5f as "
             + "the numeric 0.5, so real + numeric is double precision and PostgreSQL "
             + "fails: recursive query column has type real in non-recursive term but "
             + "type double precision overall"
@@ -1246,7 +1246,7 @@ public sealed record RecursionShapeTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING: translator renders the float constant of x * 3 (3f) as the "
+        Skip = "#111 (translator #131): translator renders the float constant of x * 3 (3f) as the "
             + "integer 3, so real * integer is double precision and PostgreSQL fails: "
             + "recursive query column has type real in non-recursive term but type "
             + "double precision overall"

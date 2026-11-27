@@ -310,7 +310,7 @@ public sealed record BuiltDateTimeTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING: a DateTime constant of the kind Utc is written as a TIMESTAMP"
+        Skip = "#111 (translator #129): a DateTime constant of the kind Utc is written as a TIMESTAMP"
             + " literal and read back with the kind Unspecified."
     )]
     public void ReadsAConstantDateTimeOfTheKindUtc()
@@ -324,7 +324,7 @@ public sealed record BuiltDateTimeTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING: CASE over a DateTime built with the kind Utc (timestamptz) and"
+        Skip = "#111 (translator #129): CASE over a DateTime built with the kind Utc (timestamptz) and"
             + " one without (timestamp) is a timestamptz, read with the kind Utc for"
             + " both."
     )]
@@ -465,7 +465,7 @@ public sealed record BuiltDateTimeTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING: new TimeOnly(ticks) of a computed count of ticks drops the ticks"
+        Skip = "#111 (translator #130): new TimeOnly(ticks) of a computed count of ticks drops the ticks"
             + " below a microsecond, which .NET keeps."
     )]
     public void BuildsTimesFromTicksBelowAMicrosecond()
@@ -797,7 +797,7 @@ public sealed record BuiltDateTimeTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING: FirstOrDefault of a filtered group of DateTimes built with the"
+        Skip = "#111 (translator #129): FirstOrDefault of a filtered group of DateTimes built with the"
             + " kind Utc gives the default as COALESCE(timestamptz, TIMESTAMP"
             + " '0001-01-01'), read with the kind Utc, where default(DateTime) is"
             + " Unspecified."

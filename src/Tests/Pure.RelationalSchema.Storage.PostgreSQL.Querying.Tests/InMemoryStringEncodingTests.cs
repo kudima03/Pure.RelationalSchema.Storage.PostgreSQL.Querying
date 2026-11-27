@@ -27,7 +27,7 @@ public sealed record InMemoryStringEncodingTests : IClassFixture<ExecutionFixtur
     private ExecutionComparison Enumeration => new ExecutionComparison(_fixture);
 
     [Fact(
-        Skip = "PENDING translator: a lone UTF-16 surrogate in a text literal is not "
+        Skip = "#111 (translator #135): a lone UTF-16 surrogate in a text literal is not "
             + "refused; Npgsql throws EncoderFallbackException and closes the connection."
     )]
     public void RefusesAStringWithALoneSurrogateAndKeepsTheConnectionOpen()

@@ -195,7 +195,7 @@ public sealed record RecursionCompositionTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING: translator refuses FirstOrDefault(defaultValue) without a "
+        Skip = "#111 (translator #141): translator refuses FirstOrDefault(defaultValue) without a "
             + "predicate: 'The method Queryable.FirstOrDefault is not supported.' "
             + "(also over a plain table)"
     )]
@@ -799,7 +799,7 @@ public sealed record RecursionCompositionTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING: translator joins a walk whose seed reads the outer row as "
+        Skip = "#111 (translator #143): translator joins a walk whose seed reads the outer row as "
             + "INNER JOIN (WITH RECURSIVE ...) AS t4 ON TRUE, not JOIN LATERAL, so "
             + "PostgreSQL fails: 42P01 invalid reference to FROM-clause entry for "
             + "table t0"
@@ -1024,7 +1024,7 @@ public sealed record RecursionCompositionTests : IClassFixture<ExecutionFixture>
     // Also without a walk: any composed query of rows captured as IEnumerable<IRow>
     // and read by an Enumerable operator (a bare table or AsQueryable() works).
     [Fact(
-        Skip = "PENDING: the walk captured as IEnumerable<IRow> is inlined under "
+        Skip = "#111 (translator #138): the walk captured as IEnumerable<IRow> is inlined under "
             + "Enumerable.Any, and translator refuses the query operator below it: "
             + "'The method PostgreSqlRecursion.WithRecursive is not supported.'"
     )]

@@ -94,7 +94,7 @@ public sealed record MarkerResultTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING: the translator refuses FirstOrDefault(source, defaultValue) "
+        Skip = "#111 (translator #141): the translator refuses FirstOrDefault(source, defaultValue) "
             + "(The method 'Queryable.FirstOrDefault' is not supported); "
             + "TranslatedQuery.Default reads a given default only as the third "
             + "argument, so it would then return default(T)."
@@ -105,7 +105,7 @@ public sealed record MarkerResultTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING: the translator refuses LastOrDefault(source, defaultValue) "
+        Skip = "#111 (translator #141): the translator refuses LastOrDefault(source, defaultValue) "
             + "(The method 'Queryable.LastOrDefault' is not supported); "
             + "TranslatedQuery.Default reads a given default only as the third "
             + "argument, so it would then return default(T)."
@@ -118,7 +118,7 @@ public sealed record MarkerResultTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING: the translator refuses SingleOrDefault(source, "
+        Skip = "#111 (translator #141): the translator refuses SingleOrDefault(source, "
             + "defaultValue) (The method 'Queryable.SingleOrDefault' is not "
             + "supported); TranslatedQuery.Default reads a given default only as "
             + "the third argument, so it would then return default(T)."
@@ -628,7 +628,7 @@ public sealed record MarkerResultTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING: row.Cells.Count in w.Rows.Sum(row => ...) is refused "
+        Skip = "#111: row.Cells.Count in w.Rows.Sum(row => ...) is refused "
             + "(Specified method is not supported, from EntityExpression.Columns): "
             + "EntityExpression binds the lambdas of Queryable operators and "
             + "markers only, not those of Enumerable operators over the rows of a "

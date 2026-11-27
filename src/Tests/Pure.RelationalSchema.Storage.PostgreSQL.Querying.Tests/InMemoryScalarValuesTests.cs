@@ -241,7 +241,7 @@ public sealed record InMemoryScalarValuesTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING translator: -0.0 is written as the integer literal -0, which "
+        Skip = "#111 (translator #131): -0.0 is written as the integer literal -0, which "
             + "PostgreSQL reads as 0, so the sign of zero is lost."
     )]
     public void ReadsTheNegativeZeroDouble()
@@ -297,7 +297,7 @@ public sealed record InMemoryScalarValuesTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING translator: a DateTime of kind Utc is written as a timestamp "
+        Skip = "#111 (translator #129): a DateTime of kind Utc is written as a timestamp "
             + "and read back of kind Unspecified, where LINQ to Objects keeps the kind."
     )]
     public void ReadsDatetimesOfUtcKind()
@@ -355,7 +355,7 @@ public sealed record InMemoryScalarValuesTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING translator: a TimeOnly finer than a microsecond is "
+        Skip = "#111 (translator #130): a TimeOnly finer than a microsecond is "
             + "truncated by its literal (HH:mm:ss.FFFFFF), not refused as a DateTime is."
     )]
     public void RefusesTimesFinerThanAMicrosecond()
@@ -395,7 +395,7 @@ public sealed record InMemoryScalarValuesTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING translator: a TimeSpan finer than a microsecond is rounded "
+        Skip = "#111 (translator #130): a TimeSpan finer than a microsecond is rounded "
             + "by its interval literal, not refused as a DateTime is."
     )]
     public void RefusesTimeSpansFinerThanAMicrosecond()
@@ -433,7 +433,7 @@ public sealed record InMemoryScalarValuesTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING translator: VALUES of byte is refused (In-memory rows of type "
+        Skip = "#111 (translator #136): VALUES of byte is refused (In-memory rows of type "
             + "'Byte' cannot be translated into SQL), as #122 is for unsigned numbers."
     )]
     public void ReadsBytes()
@@ -442,7 +442,7 @@ public sealed record InMemoryScalarValuesTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING translator: VALUES of sbyte is refused (In-memory rows of type "
+        Skip = "#111 (translator #136): VALUES of sbyte is refused (In-memory rows of type "
             + "'SByte' cannot be translated into SQL), as #122 is for unsigned numbers."
     )]
     public void ReadsSignedBytes()
@@ -451,7 +451,7 @@ public sealed record InMemoryScalarValuesTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING translator: VALUES of char is refused (In-memory rows of type "
+        Skip = "#111 (translator #136): VALUES of char is refused (In-memory rows of type "
             + "'Char' cannot be translated into SQL), though a char literal is text."
     )]
     public void ReadsInMemoryCharactersAsText()
@@ -545,7 +545,7 @@ public sealed record InMemoryScalarValuesTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING translator: PostgreSQL ranks NaN above every number and equal "
+        Skip = "#111 (translator #132): PostgreSQL ranks NaN above every number and equal "
             + "to itself, so NaN > 0 and NaN == NaN are true where C# gives false."
     )]
     public void ComparesTheSpecialInMemoryDoublesWithZero()
@@ -574,7 +574,7 @@ public sealed record InMemoryScalarValuesTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "PENDING translator: a TimeOnly finer than a microsecond is "
+        Skip = "#111 (translator #130): a TimeOnly finer than a microsecond is "
             + "truncated by its literal, so it joins the stored time it differs from."
     )]
     public void JoinsATimeColumnToInMemoryTimesFinerThanAMicrosecond()
