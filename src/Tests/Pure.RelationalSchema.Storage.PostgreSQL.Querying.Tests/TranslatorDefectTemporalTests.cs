@@ -91,11 +91,7 @@ public sealed record TranslatorDefectTemporalTests : IClassFixture<ExecutionFixt
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #128): a DateTime of the kind Utc built from parts is "
-            + "MAKE_TIMESTAMP(...) AT TIME ZONE 'UTC', a timestamptz, whose hour and day "
-            + "PostgreSQL reads in the session time zone, not as written."
-    )]
+    [Fact]
     public void ReadsTheMembersOfUtcDateTimesBuiltFromPartsAsWritten()
     {
         AssertSameElementsInSessionTimeZone(db =>
@@ -113,10 +109,7 @@ public sealed record TranslatorDefectTemporalTests : IClassFixture<ExecutionFixt
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #128): the date and the time of a timestamptz built "
-            + "with the kind Utc are taken in the session time zone, not as written."
-    )]
+    [Fact]
     public void ReadsTheDatesAndTimesOfUtcDateTimesBuiltFromPartsAsWritten()
     {
         AssertSameElementsInSessionTimeZone(db =>
@@ -135,11 +128,7 @@ public sealed record TranslatorDefectTemporalTests : IClassFixture<ExecutionFixt
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #128): a timestamptz built with the kind Utc compares "
-            + "with a timestamp through the session time zone, where .NET compares the "
-            + "ticks whatever the kind."
-    )]
+    [Fact]
     public void ComparesUtcDateTimesBuiltFromPartsByTheirTicks()
     {
         AssertSameElementsInSessionTimeZone(db =>
@@ -155,11 +144,7 @@ public sealed record TranslatorDefectTemporalTests : IClassFixture<ExecutionFixt
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #128): a timestamptz built with the kind Utc from the "
-            + "parts of a stored timestamp compares with it through the session time "
-            + "zone."
-    )]
+    [Fact]
     public void ComparesUtcDateTimesBuiltFromThePartsOfCellsWithTheCells()
     {
         long[] ids = [1, 4, 6, 7, 8, 11, 13, 92];
@@ -198,11 +183,7 @@ public sealed record TranslatorDefectTemporalTests : IClassFixture<ExecutionFixt
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #128): timestamptz - timestamp converts the timestamp "
-            + "through the session time zone, and AddDays(1) of a timestamptz across the "
-            + "change to daylight saving time adds 23 hours."
-    )]
+    [Fact]
     public void ComputesWithUtcDateTimesBuiltFromPartsByTheirTicks()
     {
         AssertSameElementsInSessionTimeZone(db =>
@@ -217,15 +198,12 @@ public sealed record TranslatorDefectTemporalTests : IClassFixture<ExecutionFixt
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #128): UNION of a timestamptz built with the kind Utc "
-            + "and a stored timestamp is a timestamptz, which shifts the stored values "
-            + "by the session time zone and reads them with the kind Utc (also "
-            + "translator #129)."
-    )]
-    public void UnitesUtcDateTimesBuiltFromPartsWithStoredDateTimes()
+    // A column is a timestamp or a timestamptz: no column holds the values of the
+    // kind Utc of one side and those of the kind Unspecified of the other.
+    [Fact]
+    public void RefusesUnitingUtcDateTimesBuiltFromPartsWithStoredDateTimes()
     {
-        AssertSameElementsInSessionTimeZone(db =>
+        new ExecutionComparison(_fixture).AssertNotSupported(db =>
             db.Values.Where(x => long.Parse(x.Cells[ValueId].Value.TextValue) < 13)
                 .Select(x => (int)long.Parse(x.Cells[ValueId].Value.TextValue))
                 .Select(x => new DateTime(2024, 1, 1, x, 0, 0, DateTimeKind.Utc))
@@ -244,11 +222,7 @@ public sealed record TranslatorDefectTemporalTests : IClassFixture<ExecutionFixt
         );
     }
 
-    [Theory(
-        Skip = "#111 (translator #128): new DateTime(ticks) has no range guard: ticks "
-            + "before 0001-01-01 or past 9999-12-31 give the year 1, 1 BC or 10000 where "
-            + ".NET throws."
-    )]
+    [Theory]
     [InlineData(0)]
     [InlineData(1)]
     [InlineData(2)]
@@ -263,9 +237,8 @@ public sealed record TranslatorDefectTemporalTests : IClassFixture<ExecutionFixt
     }
 
     [Theory(
-        Skip = "#111 (translator #128): date and timestamp arithmetic runs past "
-            + "9999-12-31 and before 0001-01-01 (the year 10000, or 1 BC) where .NET "
-            + "throws."
+        Skip = "PostgreSQL computes dates past 9999-12-31 and before 0001-01-01 (the "
+            + "year 10000, or 1 BC) where .NET throws."
     )]
     [InlineData(0)]
     [InlineData(1)]
@@ -282,11 +255,7 @@ public sealed record TranslatorDefectTemporalTests : IClassFixture<ExecutionFixt
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #128): a constant part out of range makes the guarded "
-            + "part a constant PostgreSQL folds while it plans the statement, which "
-            + "fails though no row reaches the branch."
-    )]
+    [Fact]
     public void LeavesConstantPartsOutOfRangeBesideCellsInABranchNoRowReaches()
     {
         Comparison.AssertSameElements(db =>
@@ -302,11 +271,7 @@ public sealed record TranslatorDefectTemporalTests : IClassFixture<ExecutionFixt
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #128): MAKE_TIME(0, 0, 60) and MAKE_TIMESTAMP(2024, 1, "
-            + "1, 24, 0, 0) of constant parts are folded while PostgreSQL plans the "
-            + "statement, which fails though no row reaches the branch."
-    )]
+    [Fact]
     public void LeavesConstantValuesOutOfRangeInABranchNoRowReaches()
     {
         Comparison.AssertSameElements(db =>
@@ -320,10 +285,7 @@ public sealed record TranslatorDefectTemporalTests : IClassFixture<ExecutionFixt
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #128): TimeOnly - TimeOnly is time - time, a negative "
-            + "interval for an earlier time, where .NET wraps around midnight."
-    )]
+    [Fact]
     public void SubtractsStoredTimesAroundMidnight()
     {
         Comparison.AssertSameElements(db =>

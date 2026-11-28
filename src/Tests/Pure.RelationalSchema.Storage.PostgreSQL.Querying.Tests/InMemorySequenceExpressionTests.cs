@@ -1,9 +1,6 @@
 using System.Globalization;
 using Pure.RelationalSchema.Abstractions.Column;
 
-// The tests of semantics the translation does not keep yet are skipped until it does.
-#pragma warning disable xUnit1004
-
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying.Tests;
 
 /// <summary>

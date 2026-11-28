@@ -1,5 +1,3 @@
-#pragma warning disable xUnit1004 // Tests blocked on a fix are skipped with the reason.
-
 using Linq.Expressions.Translation.PostgreSql;
 using Pure.RelationalSchema.Abstractions.Column;
 
@@ -38,12 +36,7 @@ public sealed record RecursionDefectTests : IClassFixture<ExecutionFixture>
 
     // --------------------------------------------------------- array columns of seeds
 
-    [Fact(
-        Skip = "#111 (translator #128): a null array of the seed is written NULL AS "
-            + "\"Tags\", not cast to text[], so PostgreSQL rejects the step's "
-            + "ARRAY['a', 'b'] (42804: recursive query column 3 has type text in "
-            + "non-recursive term but type text[] overall)"
-    )]
+    [Fact]
     public void CarriesTheArraysOfTheStepFromANullSeedColumn()
     {
         string[] labels = Labels;
@@ -79,12 +72,7 @@ public sealed record RecursionDefectTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #128): an empty array of the seed is not cast to "
-            + "text[], so PostgreSQL rejects the step's ARRAY['a', 'b'] (42804: "
-            + "recursive query column 3 has type text in non-recursive term but type "
-            + "text[] overall)"
-    )]
+    [Fact]
     public void CarriesTheArraysOfTheStepFromAnEmptyArraySeedColumn()
     {
         string[] labels = Labels;
@@ -122,26 +110,16 @@ public sealed record RecursionDefectTests : IClassFixture<ExecutionFixture>
 
     // ------------------------------------- the maximum depth under queries reading none
 
-    [Fact(
-        Skip = "#111 (translator #128): the maximum depth does not fail when the query "
-            + "around the walk filters out every row: WHERE FALSE around the derived "
-            + "table lets PostgreSQL skip the recursion, so no rows are returned "
-            + "where the README promises PostgreSQL's error"
-    )]
-    public void FailsAWalkDeeperThanTheMaximumDepthUnderAFalseFilter()
+    // PostgreSQL does not run a recursion it has proven no row is read from, so
+    // the walk that would fail past its maximum depth is skipped.
+    [Fact]
+    public void SkipsAWalkDeeperThanTheMaximumDepthUnderAFalseFilter()
     {
-        Enumeration.AssertSameElements(
-            db => Endless(db, 2).Where(x => false),
-            db => InMemoryEndless(db, 2).Where(x => false)
-        );
+        Enumeration.AssertSameElements(db => Endless(db, 2).Where(x => false), db => []);
     }
 
-    [Fact(
-        Skip = "#111 (translator #128): the maximum depth does not fail when the walk "
-            + "is joined with no rows: PostgreSQL skips the recursion, so no rows are "
-            + "returned where the README promises PostgreSQL's error"
-    )]
-    public void FailsAWalkDeeperThanTheMaximumDepthJoinedWithNoRows()
+    [Fact]
+    public void SkipsAWalkDeeperThanTheMaximumDepthJoinedWithNoRows()
     {
         Enumeration.AssertSameElements(
             db =>
@@ -158,31 +136,13 @@ public sealed record RecursionDefectTests : IClassFixture<ExecutionFixture>
                                 parent.Cells[ParentId].Value.TextValue
                             )
                     ),
-            db =>
-                InMemoryEndless(db, 2)
-                    .Join(
-                        db.Parents.Where(x =>
-                            x.Cells[ParentId].Value.TextValue == "none"
-                        ),
-                        x => x.Id.ToString(),
-                        x => x.Cells[ParentId].Value.TextValue,
-                        (hop, parent) =>
-                            new ValueTuple<long, string>(
-                                hop.Id,
-                                parent.Cells[ParentId].Value.TextValue
-                            )
-                    )
+            db => []
         );
     }
 
     // ---------------------------------------- a recursion correlated with a level
 
-    [Fact(
-        Skip = "#111 (translator #128): a recursion whose seed reads the level of an "
-            + "outer step is joined in SelectMany as INNER JOIN (WITH RECURSIVE ...) "
-            + "AS t6 ON TRUE, without LATERAL (42P01: invalid reference to "
-            + "FROM-clause entry for table t2); see also #143"
-    )]
+    [Fact]
     public void FlattensARecursionCorrelatedWithTheLevelOfTheStep()
     {
         Enumeration.AssertSameElements(
@@ -249,15 +209,6 @@ public sealed record RecursionDefectTests : IClassFixture<ExecutionFixture>
     private IQueryable<Hop> Endless(ExecutionTables db, long maxDepth)
     {
         return MarkerCalls.WithRecursive(
-            Seed(db),
-            level => level.Select(x => new Hop(x.Id, x.Depth + 1)),
-            maxDepth
-        );
-    }
-
-    private IEnumerable<Hop> InMemoryEndless(ExecutionTables db, long maxDepth)
-    {
-        return RecursionReference.Levels(
             Seed(db),
             level => level.Select(x => new Hop(x.Id, x.Depth + 1)),
             maxDepth

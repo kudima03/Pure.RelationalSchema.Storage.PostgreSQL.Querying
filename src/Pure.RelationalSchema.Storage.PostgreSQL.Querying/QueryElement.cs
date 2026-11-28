@@ -2,7 +2,6 @@ using System.Collections.ObjectModel;
 using System.Linq.Expressions;
 using System.Reflection;
 using Linq.Expressions.Translation.PostgreSql;
-using Pure.RelationalSchema.Abstractions.Table;
 using Pure.RelationalSchema.HashCodes;
 using Pure.RelationalSchema.Storage.Abstractions;
 
@@ -86,10 +85,30 @@ internal sealed record QueryElement
             );
     }
 
+    /// <summary>
+    /// Whether the call combines the elements of two queries, which then have one
+    /// shape: a set operation, or <c>UnionBy</c>, whose second source holds elements
+    /// too (that of <c>IntersectBy</c> and <c>ExceptBy</c> holds keys).
+    /// </summary>
     public static bool IsSetOperation(MethodCallExpression call)
     {
         return call.Method.DeclaringType == typeof(Queryable)
-            && SetOperations.Contains(call.Method.Name);
+            && (
+                SetOperations.Contains(call.Method.Name)
+                || call.Method.Name == nameof(Queryable.UnionBy)
+            );
+    }
+
+    /// <summary>
+    /// Whether the call is of an operator whose lambdas read the elements of its
+    /// sources: a query operator, a PostgreSQL marker, or a window function.
+    /// </summary>
+    public static bool IsOperator(MethodCallExpression call)
+    {
+        return call.Method.DeclaringType == typeof(Queryable)
+            || call.Method.DeclaringType == typeof(Enumerable)
+            || call.Method.DeclaringType == typeof(PostgreSqlWindows)
+            || call.Method.DeclaringType == typeof(PostgreSqlRecursion);
     }
 
     /// <summary>
@@ -100,14 +119,6 @@ internal sealed record QueryElement
         return Resolved(element) is ConstantExpression { Value: ElementRow row }
             ? row
             : null;
-    }
-
-    /// <summary>
-    /// The table whose row an element is, when it is one.
-    /// </summary>
-    public static ITable? TableOf(Expression? element)
-    {
-        return RowOf(element)?.Table;
     }
 
     /// <summary>
@@ -264,15 +275,10 @@ internal sealed record QueryElement
             ConstantExpression { Value: PostgreSqlStoredTableDataSet table } =>
                 Expression.Constant(new ElementRow(table.TableSchema), typeof(IRow)),
             SequenceElement sequence => sequence.Element,
-            MethodCallExpression call when IsOperator(call) || IsMarker(call) => Of(call),
+            MemberExpression { Expression: SequenceElement window } => window.Element,
+            MethodCallExpression call when IsOperator(call) => Of(call),
             _ => null,
         };
-    }
-
-    private static bool IsOperator(MethodCallExpression call)
-    {
-        return call.Method.DeclaringType == typeof(Queryable)
-            || call.Method.DeclaringType == typeof(Enumerable);
     }
 
     private static Expression? Of(MethodCallExpression call)
@@ -280,8 +286,10 @@ internal sealed record QueryElement
         string name = call.Method.Name;
         bool marker = IsMarker(call);
         return marker && name == nameof(PostgreSqlWindows.Over) ? Projected(call, 4)
-            : marker || RowPreserving.Contains(name) || SetOperations.Contains(name)
-                ? Of(call.Arguments[0])
+            : marker ? Combined(Of(call.Arguments[0]), Stepped(call))
+            : SetOperations.Contains(name) || name == nameof(Queryable.UnionBy)
+                ? Combined(Of(call.Arguments[0]), Of(call.Arguments[1]))
+            : RowPreserving.Contains(name) ? Of(call.Arguments[0])
             : name switch
             {
                 nameof(Queryable.Select) => Projected(call, 1),
@@ -299,6 +307,38 @@ internal sealed record QueryElement
                     Optional(Of(call.Arguments[0])),
                 _ => null,
             };
+    }
+
+    /// <summary>
+    /// The element of the rows the step of a <c>WithRecursive</c> adds to those of
+    /// its seed.
+    /// </summary>
+    private static Expression? Stepped(MethodCallExpression call)
+    {
+        return Projected(call, 1) is Expression step ? Of(step) : null;
+    }
+
+    /// <summary>
+    /// The element of two queries combined into one, that of the first, whose rows
+    /// may be missing where they may be in either: SQL reads the rows of both from
+    /// the same columns.
+    /// </summary>
+    private static Expression? Combined(Expression? first, Expression? second)
+    {
+        Expression? left = Resolved(first);
+        Expression? right = Resolved(second);
+        return (left, right) switch
+        {
+            (
+                ConstantExpression { Value: ElementRow { IsOptional: false } },
+                ConstantExpression { Value: ElementRow { IsOptional: true } }
+            ) => right,
+            (NewExpression one, NewExpression other)
+                when one.Arguments.Count == other.Arguments.Count => one.Update(
+                one.Arguments.Zip(other.Arguments, (x, y) => Combined(x, y)!)
+            ),
+            _ => first,
+        };
     }
 
     /// <summary>
@@ -396,6 +436,11 @@ internal sealed record QueryElement
                 new SequenceElement(lambda.Parameters[1].Type, Of(call.Arguments[1]), null),
             ],
             (nameof(Queryable.SelectMany), 2) => [outer, Collection(call)],
+            (nameof(PostgreSqlWindows.Over), 4) when IsMarker(call) && lambda is not null =>
+            [
+                outer,
+                new SequenceElement(lambda.Parameters[1].Type, outer, null),
+            ],
             (nameof(PostgreSqlWindows.Over), 2)
             or (nameof(PostgreSqlRecursion.WithRecursive), 1)
                 when IsMarker(call) && lambda is not null =>

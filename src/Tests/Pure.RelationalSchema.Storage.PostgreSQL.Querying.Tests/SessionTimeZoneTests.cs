@@ -2,8 +2,6 @@ using System.Globalization;
 using Pure.RelationalSchema.Abstractions.Column;
 using Pure.RelationalSchema.Storage.Abstractions;
 
-#pragma warning disable xUnit1004
-
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying.Tests;
 
 /// <summary>
@@ -23,11 +21,6 @@ public sealed record SessionTimeZoneTests : IClassFixture<SessionTimeZoneFixture
     private const string Ahead = SessionTimeZoneFixture.Ahead;
 
     private const string Behind = SessionTimeZoneFixture.Behind;
-
-    private const string FollowsTheZone =
-        "#113: a stored datetime parsed with AssumeUniversal | AdjustToUniversal is "
-        + "read as TO_TIMESTAMP('+00 ' || text, ...), a timestamptz, whose ";
-
     private static readonly DateTimeStyles Universal =
         DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal;
 
@@ -262,12 +255,7 @@ public sealed record SessionTimeZoneTests : IClassFixture<SessionTimeZoneFixture
             );
     }
 
-    [Theory(
-        Skip = FollowsTheZone
-            + "year, month, day and day of week follow the session's zone: the year "
-            + "of 9999-12-31T23:59:59Z is 10000 ahead of UTC, that of 0001-01-01 -1 "
-            + "behind it."
-    )]
+    [Theory]
     [InlineData(Ahead)]
     [InlineData(Behind)]
     public void ReadsTheDatePartsOfStoredDateTimesParsedAsUniversal(string zone)
@@ -286,10 +274,7 @@ public sealed record SessionTimeZoneTests : IClassFixture<SessionTimeZoneFixture
             );
     }
 
-    [Theory(
-        Skip = FollowsTheZone
-            + "hour and minute follow the session's zone: 14 or 20 for midnight."
-    )]
+    [Theory]
     [InlineData(Ahead)]
     [InlineData(Behind)]
     public void ReadsTheTimePartsOfStoredDateTimesParsedAsUniversal(string zone)
@@ -306,11 +291,7 @@ public sealed record SessionTimeZoneTests : IClassFixture<SessionTimeZoneFixture
             );
     }
 
-    [Theory(
-        Skip = FollowsTheZone
-            + "DATE_TRUNC('day', ...) truncates it in the session's zone, and the "
-            + "statement fails with InvalidCastException."
-    )]
+    [Theory]
     [InlineData(Ahead)]
     [InlineData(Behind)]
     public void ReadsTheDayOfStoredDateTimesParsedAsUniversal(string zone)
@@ -322,11 +303,7 @@ public sealed record SessionTimeZoneTests : IClassFixture<SessionTimeZoneFixture
             );
     }
 
-    [Theory(
-        Skip = FollowsTheZone
-            + "comparison with a captured UTC DateTime, written as a timestamp "
-            + "(translator #129), takes the constant in the session's zone."
-    )]
+    [Theory]
     [InlineData(Ahead)]
     [InlineData(Behind)]
     public void ComparesStoredDateTimesParsedAsUniversalWithCapturedOnes(string zone)
@@ -341,12 +318,7 @@ public sealed record SessionTimeZoneTests : IClassFixture<SessionTimeZoneFixture
             );
     }
 
-    [Fact(
-        Skip = FollowsTheZone
-            + "AddDays adds whole days in the session's zone, so that 30 days from "
-            + "2024-02-29T23:59:59Z, across the start of daylight saving time in "
-            + "St. John's, end an hour early."
-    )]
+    [Fact]
     public void ShiftsStoredDateTimesParsedAsUniversalAcrossDaylightSavingTime()
     {
         Comparison(Behind)

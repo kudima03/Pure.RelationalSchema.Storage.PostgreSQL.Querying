@@ -3,9 +3,6 @@ using Linq.Expressions.Translation.PostgreSql;
 using Pure.RelationalSchema.Abstractions.Column;
 using Pure.RelationalSchema.Storage.Abstractions;
 
-// The tests of semantics translation does not keep yet are skipped until it does.
-#pragma warning disable xUnit1004
-
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying.Tests;
 
 /// <summary>
@@ -93,23 +90,13 @@ public sealed record MarkerResultTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #141): the translator refuses FirstOrDefault(source, defaultValue) "
-            + "(The method 'Queryable.FirstOrDefault' is not supported); "
-            + "TranslatedQuery.Default reads a given default only as the third "
-            + "argument, so it would then return default(T)."
-    )]
+    [Fact]
     public void ReadsTheGivenDefaultForTheFirstResultOfAnEmptyWindow()
     {
         AssertNoRanks(ranks => ranks.FirstOrDefault(new ValueTuple<long, long>(-1, -2)));
     }
 
-    [Fact(
-        Skip = "#111 (translator #141): the translator refuses LastOrDefault(source, defaultValue) "
-            + "(The method 'Queryable.LastOrDefault' is not supported); "
-            + "TranslatedQuery.Default reads a given default only as the third "
-            + "argument, so it would then return default(T)."
-    )]
+    [Fact]
     public void ReadsTheGivenDefaultForTheLastResultOfAnEmptyWindow()
     {
         AssertNoRanks(ranks =>
@@ -117,12 +104,7 @@ public sealed record MarkerResultTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #141): the translator refuses SingleOrDefault(source, "
-            + "defaultValue) (The method 'Queryable.SingleOrDefault' is not "
-            + "supported); TranslatedQuery.Default reads a given default only as "
-            + "the third argument, so it would then return default(T)."
-    )]
+    [Fact]
     public void ReadsTheGivenDefaultForTheSingleResultOfAnEmptyWindow()
     {
         AssertNoRanks(ranks => ranks.SingleOrDefault(new ValueTuple<long, long>(-1, -2)));
@@ -627,13 +609,7 @@ public sealed record MarkerResultTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111: row.Cells.Count in w.Rows.Sum(row => ...) is refused "
-            + "(Specified method is not supported, from EntityExpression.Columns): "
-            + "EntityExpression binds the lambdas of Queryable operators and "
-            + "markers only, not those of Enumerable operators over the rows of a "
-            + "frame."
-    )]
+    [Fact]
     public void SumsTheCountOfTheCellsOfTheRowsOfAFrame()
     {
         Enumeration.AssertSameElements(

@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using System.Reflection;
 using Pure.RelationalSchema.Storage.Abstractions;
 
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying;
@@ -42,7 +43,7 @@ internal sealed record PostgreSqlQueryProvider : IQueryProvider
         {
             return (TResult)table.Rows;
         }
-        TranslatedQuery translated = Translated(query);
+        TranslatedQuery translated = Translated<TResult>(query);
         IReadOnlyList<object?> values = translated.Values();
         if (translated.IsSequence)
         {
@@ -82,6 +83,56 @@ internal sealed record PostgreSqlQueryProvider : IQueryProvider
                 "The query is not a query operator over stored tables, so it cannot "
                     + "be translated to SQL."
             );
+    }
+
+    /// <summary>
+    /// The query whose result is of the type. An operator given a default value
+    /// (<c>FirstOrDefault(defaultValue)</c>, ...) is translated without it, as the
+    /// provider returns the default itself where no row is read: SQL yields a default
+    /// only for a single value that is never NULL.
+    /// </summary>
+    private static TranslatedQuery Translated<TResult>(Expression query)
+    {
+        return query is MethodCallExpression call
+            && call.Type == typeof(TResult)
+            && TranslatedQuery.Given(call) is Expression fallback
+            ? new TranslatedQuery(
+                Expression.Call(Undefaulted<TResult>(call), call.Arguments.SkipLast(1)),
+                fallback
+            )
+            : Translated(query);
+    }
+
+    /// <summary>
+    /// The overload of an operator given a default value that is given none.
+    /// </summary>
+    private static MethodInfo Undefaulted<T>(MethodCallExpression call)
+    {
+        bool filtered = call.Arguments.Count == 3;
+        return call.Method.Name switch
+        {
+            nameof(Queryable.FirstOrDefault) => filtered
+                ? Method<T>((x, y) => x.FirstOrDefault(y))
+                : Method<T>(x => x.FirstOrDefault()),
+            nameof(Queryable.LastOrDefault) => filtered
+                ? Method<T>((x, y) => x.LastOrDefault(y))
+                : Method<T>(x => x.LastOrDefault()),
+            _ => filtered
+                ? Method<T>((x, y) => x.SingleOrDefault(y))
+                : Method<T>(x => x.SingleOrDefault()),
+        };
+    }
+
+    private static MethodInfo Method<T>(Expression<Func<IQueryable<T>, T?>> call)
+    {
+        return ((MethodCallExpression)call.Body).Method;
+    }
+
+    private static MethodInfo Method<T>(
+        Expression<Func<IQueryable<T>, Expression<Func<T, bool>>, T?>> call
+    )
+    {
+        return ((MethodCallExpression)call.Body).Method;
     }
 
     /// <summary>

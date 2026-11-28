@@ -70,6 +70,8 @@ internal sealed record ColumnProperty
         [typeof(ulong)] = typeof(ulong?),
     };
 
+    private static readonly HashSet<Type> Unsigned = [typeof(ushort), typeof(uint)];
+
     private readonly IColumn _column;
 
     public ColumnProperty(IColumn column)
@@ -94,9 +96,11 @@ internal sealed record ColumnProperty
         TypeName switch
         {
             "bool" => typeof(bool?),
-            "int" or "ushort" => typeof(int?),
-            "long" or "uint" => typeof(long?),
-            "ulong" => typeof(decimal?),
+            "int" => typeof(int?),
+            "long" => typeof(long?),
+            "ushort" => typeof(ushort?),
+            "uint" => typeof(uint?),
+            "ulong" => typeof(ulong?),
             "uuid" => typeof(Guid?),
             "datetime" => typeof(DateTime?),
             "date" => typeof(DateOnly?),
@@ -122,11 +126,9 @@ internal sealed record ColumnProperty
         Type? column = Nullable.GetUnderlyingType(Type);
         if (
             column is null
-            || TypeName is "double" or "float"
-            || !(
-                column == parsed
-                || (Numbers.ContainsKey(column) && Numbers.ContainsKey(parsed))
-            )
+            || TypeName == "float"
+            || (TypeName == "double" && parsed != typeof(double))
+            || !(column == parsed || IsWider(column, parsed))
         )
         {
             return null;
@@ -139,6 +141,21 @@ internal sealed record ColumnProperty
         }
         UnaryExpression value = Value(property);
         return column == parsed ? value : Expression.Convert(value, parsed);
+    }
+
+    /// <summary>
+    /// Whether a number column is read as another number type by a conversion the
+    /// translator writes: not to a <c>ushort</c> or a <c>uint</c>, which wraps in
+    /// C# where a cast to the wider PostgreSQL type does not, and to a
+    /// <c>ulong</c> only from an unsigned column, whose values it holds. Any other
+    /// parse stays a parse of the text.
+    /// </summary>
+    private static bool IsWider(Type column, Type parsed)
+    {
+        return Numbers.ContainsKey(column)
+            && Numbers.ContainsKey(parsed)
+            && !Unsigned.Contains(parsed)
+            && (parsed != typeof(ulong) || Unsigned.Contains(column));
     }
 
     /// <summary>
@@ -167,8 +184,16 @@ internal sealed record ColumnProperty
                     Expression.Constant(bool.FalseString)
                 )
             ),
-            "int" or "ushort" or "long" or "uint" or "ulong" or "uuid" =>
-                Expression.Coalesce(Stringified(Value(property)), Empty),
+            "int" or "long" or "uuid" => Expression.Coalesce(
+                Stringified(Value(property)),
+                Empty
+            ),
+            "ushort" => Expression.Coalesce(Stringified<int>(Value(property)), Empty),
+            "uint" => Expression.Coalesce(Stringified<long>(Value(property)), Empty),
+            "ulong" => Expression.Coalesce(
+                Stringified<decimal>(Value(property)),
+                Empty
+            ),
             "datetime" => Guarded(property, DateTimeText(Value(property))),
             "date" => Guarded(property, DateText(Value(property))),
             "time" => Guarded(property, TimeText(Value(property))),
@@ -205,6 +230,15 @@ internal sealed record ColumnProperty
     private static MethodCallExpression Stringified(Expression value)
     {
         return Expression.Call(value, ToStrings[value.Type]);
+    }
+
+    /// <summary>
+    /// The text of an unsigned number, written as the signed number that holds its
+    /// values, as the translator writes the text of no unsigned one.
+    /// </summary>
+    private static MethodCallExpression Stringified<T>(Expression value)
+    {
+        return Stringified(Expression.Convert(value, typeof(T)));
     }
 
     /// <summary>

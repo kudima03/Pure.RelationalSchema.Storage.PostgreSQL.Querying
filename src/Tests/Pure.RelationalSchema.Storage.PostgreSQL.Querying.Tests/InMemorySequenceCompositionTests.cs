@@ -817,11 +817,7 @@ public sealed record InMemorySequenceCompositionTests : IClassFixture<ExecutionF
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #133): COLLATE \"C\" orders code points, StringComparer."
-            + "Ordinal UTF-16 code units, so U+FF41 sorts before an astral character "
-            + "there."
-    )]
+    [Fact]
     public void OrdersTextAndAnInMemorySequenceOrdinally()
     {
         string[] texts = ["B", "a", "é", "Z", "", "😀", "ａ", "a ", "é", "é"];
@@ -834,9 +830,8 @@ public sealed record InMemorySequenceCompositionTests : IClassFixture<ExecutionF
     }
 
     [Fact(
-        Skip = "#111 (translator #133): OrderBy of text without a comparer sorts by the "
-            + "database collation (glibc), not by the culture LINQ to Objects compares "
-            + "with (ICU), so leading spaces and emoji sort differently."
+        Skip = "PostgreSQL orders text by the collation of the database, .NET by the "
+            + "current culture."
     )]
     public void OrdersTextAndAnInMemorySequenceAsTheCurrentCultureDoes()
     {
@@ -849,10 +844,7 @@ public sealed record InMemorySequenceCompositionTests : IClassFixture<ExecutionF
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #132): PostgreSQL sorts NaN above +Infinity, LINQ to "
-            + "Objects below -Infinity, and the ORDER BY does not place it."
-    )]
+    [Fact]
     public void OrdersInMemoryDoublesWithTheSpecialValues()
     {
         double[] numbers =
@@ -1140,11 +1132,7 @@ public sealed record InMemorySequenceCompositionTests : IClassFixture<ExecutionF
         );
     }
 
-    [Theory(
-        Skip = "#111 (translator #137): a one-element in-memory query is taken for the "
-            + "one-row root (Translator.Root/OneRow) wherever it is, and its element "
-            + "refused."
-    )]
+    [Theory]
     [InlineData("Union")]
     [InlineData("Intersect")]
     [InlineData("Except")]
@@ -1162,11 +1150,7 @@ public sealed record InMemorySequenceCompositionTests : IClassFixture<ExecutionF
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #137): a one-element in-memory query is taken for the "
-            + "one-row root (Translator.Root/OneRow) wherever it is, and its element "
-            + "refused."
-    )]
+    [Fact]
     public void JoinsAnInMemoryQueryOfOneElement()
     {
         long[] ids = [4];
@@ -1182,11 +1166,7 @@ public sealed record InMemorySequenceCompositionTests : IClassFixture<ExecutionF
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #137): a one-element in-memory query is taken for the "
-            + "one-row root (Translator.Root/OneRow) wherever it is, and its element "
-            + "refused."
-    )]
+    [Fact]
     public void CrossJoinsAnInMemoryQueryOfOneElement()
     {
         long[] ids = [4];
@@ -1200,11 +1180,7 @@ public sealed record InMemorySequenceCompositionTests : IClassFixture<ExecutionF
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #137): a one-element in-memory query is taken for the "
-            + "one-row root (Translator.Root/OneRow) wherever it is, and its element "
-            + "refused."
-    )]
+    [Fact]
     public void FiltersByMembershipInAnInMemoryQueryOfOneElement()
     {
         long[] ids = [4];
@@ -1218,11 +1194,7 @@ public sealed record InMemorySequenceCompositionTests : IClassFixture<ExecutionF
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #137): a one-element in-memory query is taken for the "
-            + "one-row root (Translator.Root/OneRow) wherever it is, and its element "
-            + "refused."
-    )]
+    [Fact]
     public void CountsAnInMemoryQueryOfOneElementInAProjection()
     {
         long[] ids = [4];
@@ -1236,11 +1208,7 @@ public sealed record InMemorySequenceCompositionTests : IClassFixture<ExecutionF
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #137): a one-element in-memory query is taken for the "
-            + "one-row root (Translator.Root/OneRow) wherever it is, and its element "
-            + "refused."
-    )]
+    [Fact]
     public void ReadsTheElementOfAnInMemoryRootOfOneElementBesideAggregates()
     {
         long[] ids = [4];

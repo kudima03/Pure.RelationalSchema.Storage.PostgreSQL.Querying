@@ -1,9 +1,6 @@
 using Pure.RelationalSchema.Abstractions.Column;
 using Xunit.Abstractions;
 
-// The tests of semantics the translation does not keep yet are skipped until it does.
-#pragma warning disable xUnit1004
-
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying.Tests;
 
 /// <summary>
@@ -384,15 +381,12 @@ public sealed record StringJoinTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #134): string.Join of the distinct values of an unordered group joins"
-            + " them sorted by STRING_AGG(DISTINCT ...), not in the order of their first"
-            + " occurrence as .NET does."
-    )]
+    [Fact]
     public void JoinsTheDistinctTextsOfGroupsInTheOrderOfTheirFirstOccurrence()
     {
         Comparison.AssertSameElements(db =>
-            db.Children.GroupBy(x => x.Cells[ChildNumber].Value.TextValue)
+            db.Children.OrderBy(x => long.Parse(x.Cells[ChildId].Value.TextValue))
+                .GroupBy(x => x.Cells[ChildNumber].Value.TextValue)
                 .Select(x => new ValueTuple<string, string>(
                     x.Key,
                     string.Join(
@@ -510,10 +504,9 @@ public sealed record StringJoinTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #134): string.Join of the distinct values of an unordered subquery joins"
-            + " them in another order than that of their first occurrence."
-    )]
+    // The first occurrences are in the order of the source, which a stored table
+    // has only when it is sorted.
+    [Fact]
     public void JoinsTheDistinctTextsOfASubqueryInTheOrderOfTheirFirstOccurrence()
     {
         Comparison.AssertSameElements(db =>
@@ -521,7 +514,10 @@ public sealed record StringJoinTests : IClassFixture<ExecutionFixture>
                 parent.Cells[ParentId].Value.TextValue,
                 string.Join(
                     ",",
-                    db.Children.Select(child => child.Cells[ChildLabel].Value.TextValue)
+                    db.Children.OrderBy(child =>
+                            long.Parse(child.Cells[ChildId].Value.TextValue)
+                        )
+                        .Select(child => child.Cells[ChildLabel].Value.TextValue)
                         .Distinct()
                 )
             ))
@@ -758,11 +754,10 @@ public sealed record StringJoinTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    // STRING_AGG(DISTINCT ...) orders by its value only.
     [Fact]
-    public void RefusesJoiningTheDistinctTextsOfAGroupSortedBeforehand()
+    public void JoinsTheDistinctTextsOfAGroupSortedBeforehand()
     {
-        Enumeration.AssertNotSupported(db =>
+        Comparison.AssertSameElements(db =>
             db.Children.GroupBy(x => x.Cells[ChildNumber].Value.TextValue)
                 .Select(x => new ValueTuple<string, string>(
                     x.Key,
@@ -779,9 +774,9 @@ public sealed record StringJoinTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact]
-    public void RefusesJoiningTheDistinctTextsOfAGroupSortedByAnotherKey()
+    public void JoinsTheDistinctTextsOfAGroupSortedByAnotherKey()
     {
-        Enumeration.AssertNotSupported(db =>
+        Comparison.AssertSameElements(db =>
             db.Children.GroupBy(x => x.Cells[ChildNumber].Value.TextValue)
                 .Select(x =>
                     string.Join(

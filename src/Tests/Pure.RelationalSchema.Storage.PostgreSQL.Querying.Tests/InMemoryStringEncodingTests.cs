@@ -1,9 +1,6 @@
 using System.Data;
 using Pure.RelationalSchema.Abstractions.Column;
 
-// The tests of values the translation does not refuse yet are skipped until it does.
-#pragma warning disable xUnit1004
-
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying.Tests;
 
 /// <summary>
@@ -26,10 +23,7 @@ public sealed record InMemoryStringEncodingTests : IClassFixture<ExecutionFixtur
 
     private ExecutionComparison Enumeration => new ExecutionComparison(_fixture);
 
-    [Fact(
-        Skip = "#111 (translator #135): a lone UTF-16 surrogate in a text literal is not "
-            + "refused; Npgsql throws EncoderFallbackException and closes the connection."
-    )]
+    [Fact]
     public void RefusesAStringWithALoneSurrogateAndKeepsTheConnectionOpen()
     {
         string[] texts = ["plain", "lone\ud800surrogate"];

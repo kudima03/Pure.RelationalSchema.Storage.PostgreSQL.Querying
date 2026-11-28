@@ -32,11 +32,29 @@ internal sealed record TranslatedQuery
         nameof(Queryable.MaxBy),
     ];
 
+    private static readonly HashSet<string> Defaulted =
+    [
+        nameof(Queryable.FirstOrDefault),
+        nameof(Queryable.SingleOrDefault),
+        nameof(Queryable.LastOrDefault),
+    ];
+
     private readonly MethodCallExpression _call;
 
+    private readonly Expression? _fallback;
+
     public TranslatedQuery(MethodCallExpression call)
+        : this(call, Given(call))
+    { }
+
+    /// <summary>
+    /// The operator, and the default it returns when no row is read, when it is
+    /// given one.
+    /// </summary>
+    public TranslatedQuery(MethodCallExpression call, Expression? fallback)
     {
         _call = call;
+        _fallback = fallback;
     }
 
     public string Name => _call.Method.Name;
@@ -65,12 +83,26 @@ internal sealed record TranslatedQuery
 
     /// <summary>
     /// The value an <c>...OrDefault</c> operator returns when no row is read: the
-    /// default value given after its predicate, otherwise that of the element type.
+    /// default value it is given, otherwise that of the element type.
     /// </summary>
     public object? Default =>
-        Name.EndsWith("OrDefault", StringComparison.Ordinal) && _call.Arguments.Count == 3
-            ? new ClosureValue(_call.Arguments[2]).Value
-            : new ClosureValue(Expression.Default(ElementType)).Value;
+        new ClosureValue(_fallback ?? Expression.Default(ElementType)).Value;
+
+    /// <summary>
+    /// The default value given to a <c>FirstOrDefault</c>, <c>SingleOrDefault</c> or
+    /// <c>LastOrDefault</c>: its last argument, when that is no predicate.
+    /// </summary>
+    public static Expression? Given(MethodCallExpression call)
+    {
+        return
+            call.Method.DeclaringType == typeof(Queryable)
+            && Defaulted.Contains(call.Method.Name)
+            && call.Arguments.Count > 1
+            && call.Arguments[^1]
+                is not (LambdaExpression or UnaryExpression { NodeType: ExpressionType.Quote })
+            ? call.Arguments[^1]
+            : null;
+    }
 
     /// <summary>
     /// The values the rows of the SQL result are read as: the elements of a sequence

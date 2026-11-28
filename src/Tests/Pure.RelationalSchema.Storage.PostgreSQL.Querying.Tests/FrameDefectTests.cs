@@ -26,12 +26,7 @@ public sealed record FrameDefectTests : IClassFixture<ExecutionFixture>
 
     private WindowEdgeSources Sources => new WindowEdgeSources(_fixture);
 
-    [Fact(
-        Skip = "#111 (translator #128): Min and Max of a non-null string over a frame "
-            + "that may be empty are taken as never null and get no COALESCE: '#' || "
-            + "MAX(...) is NULL (null, not \"#\") and MIN(...) <> 'plain' is NULL, "
-            + "which reading a bool refuses (InvalidOperationException)"
-    )]
+    [Fact]
     public void ComposesTheExtremeTextOfAFrameThatMayBeEmpty()
     {
         Enumeration.AssertSameElements(
@@ -67,11 +62,7 @@ public sealed record FrameDefectTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #128): a frame filter reading an aggregate of a group "
-            + "puts the aggregate in FILTER (42803: aggregate functions are not "
-            + "allowed in FILTER)"
-    )]
+    [Fact]
     public void FiltersTheGroupsOfAFrameByTheirAggregates()
     {
         Enumeration.AssertSameElements(
@@ -107,12 +98,7 @@ public sealed record FrameDefectTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Theory(
-        Skip = "#111 (translator #128): a RANGE offset that is a fraction (also #123) "
-            + "or beyond bigint is written as numeric over an integer key, which "
-            + "PostgreSQL rejects (0A000: RANGE with offset PRECEDING/FOLLOWING is "
-            + "not supported for column type integer and offset type numeric)"
-    )]
+    [Theory]
     [InlineData("-0.5", "0.5")]
     [InlineData("-1.5", "0")]
     [InlineData("-79228162514264337593543950335", "0")]
@@ -164,15 +150,22 @@ public sealed record FrameDefectTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Theory(
-        Skip = "#111 (translator #128): a RANGE offset that is a fraction (also #123) "
-            + "or beyond bigint is written as numeric over a bigint key, which "
-            + "PostgreSQL rejects (0A000: RANGE with offset PRECEDING/FOLLOWING is "
-            + "not supported for column type bigint and offset type numeric)"
+    [Fact(
+        Skip = "#111 (translator #153): Range(-decimal.MaxValue, 0) over a bigint "
+            + "key writes 9223372036854775807 PRECEDING, which PostgreSQL adds to the "
+            + "key of each row: the frames of the keys it overflows miss rows"
     )]
+    public void RangesByAnOffsetBeyondBigintOverABigintKey()
+    {
+        RangesByAnOffsetThatIsNoBigintOverABigintKey(
+            "-79228162514264337593543950335",
+            "0"
+        );
+    }
+
+    [Theory]
     [InlineData("-1.5", "2.5")]
     [InlineData("-0.25", "0")]
-    [InlineData("-79228162514264337593543950335", "0")]
     public void RangesByAnOffsetThatIsNoBigintOverABigintKey(string start, string end)
     {
         decimal from = decimal.Parse(start, CultureInfo.InvariantCulture);
@@ -220,10 +213,7 @@ public sealed record FrameDefectTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #128): Rows(long.MinValue, 0) writes "
-            + "9223372036854775808 PRECEDING (22003: bigint out of range)"
-    )]
+    [Fact]
     public void CountsTheRowsOfAFrameFromTheSmallestLong()
     {
         Enumeration.AssertSameElements(
@@ -258,9 +248,9 @@ public sealed record FrameDefectTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact(
-        Skip = "#111 (translator #128): RangeMonths(int.MinValue, 0) writes an "
-            + "interval of 2147483648 months (22015: interval field value out of "
-            + "range)"
+        Skip = "#111 (translator #153): RangeMonths(int.MinValue, 0) writes an "
+            + "interval of 2147483647 months, which PostgreSQL subtracts from the key "
+            + "of each row (22008: timestamp out of range)"
     )]
     public void CountsTheRowsOfAFrameFromTheSmallestMonthOffset()
     {
@@ -305,11 +295,7 @@ public sealed record FrameDefectTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #128): RangeMonths(int.MinValue, 0) writes an "
-            + "interval of 2147483648 months, so the statement fails even over no "
-            + "rows (22015: interval field value out of range)"
-    )]
+    [Fact]
     public void PlansAFrameFromTheSmallestMonthOffsetOverNoRows()
     {
         Enumeration.AssertSameElements(

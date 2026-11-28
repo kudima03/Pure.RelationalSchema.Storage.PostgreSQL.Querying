@@ -3,9 +3,6 @@ using Linq.Expressions.Translation.PostgreSql;
 using Pure.RelationalSchema.Abstractions.Column;
 using Pure.RelationalSchema.Storage.Abstractions;
 
-// The tests of semantics translation does not keep yet are skipped until it does.
-#pragma warning disable xUnit1004
-
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying.Tests;
 
 /// <summary>
@@ -509,12 +506,7 @@ public sealed record CapturedMarkerTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111: a query captured as IEnumerable<T>, T not IRow, is not "
-            + "inlined (CapturedQueries.IsQuery checks the static type), so the "
-            + "translator evaluates it and refuses the marker it holds (The method "
-            + "'PostgreSqlWindows.Over' is not supported)."
-    )]
+    [Fact]
     public void FiltersRowsByAWindowCapturedAsAnEnumerable()
     {
         AssertFirstRanked(db =>
@@ -529,12 +521,7 @@ public sealed record CapturedMarkerTests : IClassFixture<ExecutionFixture>
         });
     }
 
-    [Fact(
-        Skip = "#111: a query captured as IEnumerable<T>, T not IRow, is not "
-            + "inlined (CapturedQueries.IsQuery checks the static type), so the "
-            + "translator evaluates it and fails on its cells (The property "
-            + "'IRow.Cells' cannot be mapped to a column)."
-    )]
+    [Fact]
     public void FiltersRowsByIdsOfAStoredQueryCapturedAsAnEnumerable()
     {
         Enumeration.AssertSameElements(db =>
@@ -550,12 +537,7 @@ public sealed record CapturedMarkerTests : IClassFixture<ExecutionFixture>
         });
     }
 
-    [Fact(
-        Skip = "#111: an invoked delegate returning a query "
-            + "(InvocationExpression) is no capture for CapturedQueries.IsCapture, "
-            + "so the translator evaluates it and fails on its cells (The property "
-            + "'IRow.Cells' cannot be mapped to a column)."
-    )]
+    [Fact]
     public void FiltersRowsByAWindowReturnedByAnInvokedDelegate()
     {
         AssertFirstRanked(db =>
@@ -571,11 +553,7 @@ public sealed record CapturedMarkerTests : IClassFixture<ExecutionFixture>
         });
     }
 
-    [Fact(
-        Skip = "#111 (translator #138): the translator refuses Enumerable.Any over the stored table "
-            + "inlined from an IEnumerable<IRow> capture (The method "
-            + "'Enumerable.Any' is not supported)."
-    )]
+    [Fact]
     public void FiltersRowsByATableCapturedAsAnEnumerableReadWithoutAsQueryable()
     {
         Enumeration.AssertSameElements(db =>
@@ -592,10 +570,7 @@ public sealed record CapturedMarkerTests : IClassFixture<ExecutionFixture>
         });
     }
 
-    [Fact(
-        Skip = "#111 (translator #138): the translator refuses AsQueryable over a query that is not "
-            + "a root (The method 'Queryable.AsQueryable' is not supported)."
-    )]
+    [Fact]
     public void FiltersRowsByAQueryOfRowsConvertedToAnEnumerableOfRows()
     {
         Enumeration.AssertSameElements(
@@ -622,50 +597,33 @@ public sealed record CapturedMarkerTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    // Whether or not the translator reads the conversion, the provider must keep the
-    // marker in the tree and never call it, so that a refusal is the provider's own.
-    [Fact(
-        Skip = "#111: CapturedQueries evaluates a Convert of a marker query to "
-            + "IEnumerable<IRow> and so calls PostgreSqlWindows.Over, whose own "
-            + "exception escapes unwrapped ('PostgreSqlWindows.Over' marks "
-            + "PostgreSQL's SQL ... it cannot be called): Evaluated catches "
-            + "NotSupportedException for method calls only."
-    )]
-    public void NeverCallsAWindowConvertedToAnEnumerableOfRows()
+    // The provider keeps the marker in the tree and never calls it: the window is
+    // translated where it stands, read as a query again.
+    [Fact]
+    public void FiltersRowsByAWindowReadAsAQueryableAgain()
     {
-        NotSupportedException exception = Enumeration.AssertRefused(db =>
-        {
-            IQueryable<IRow> values = db.Values;
-            IColumn id = ValueId;
-            return db
-                .Values.Where(row =>
-                    values
-                        .Over(null, null, null, (x, w) => x)
-                        .AsQueryable()
-                        .Any(x =>
-                            x.Cells[id].Value.TextValue == row.Cells[id].Value.TextValue
-                        )
-                )
-                .Select(x => x.Cells[ValueId].Value.TextValue);
-        });
-
-        Assert.DoesNotContain(
-            "cannot be called",
-            exception.Message,
-            StringComparison.Ordinal
-        );
-        Assert.Equal(
-            "The query operator Select cannot be translated to SQL.",
-            exception.Message
+        Enumeration.AssertSameElements(
+            db =>
+            {
+                IQueryable<IRow> values = db.Values;
+                IColumn id = ValueId;
+                return db
+                    .Values.Where(row =>
+                        values
+                            .Over(null, null, null, (x, w) => x)
+                            .AsQueryable()
+                            .Any(x =>
+                                x.Cells[id].Value.TextValue
+                                == row.Cells[id].Value.TextValue
+                            )
+                    )
+                    .Select(x => x.Cells[ValueId].Value.TextValue);
+            },
+            db => db.Values.Select(x => x.Cells[ValueId].Value.TextValue)
         );
     }
 
-    [Fact(
-        Skip = "#111: a lambda held in a variable (a member, not a Quote) of a "
-            + "compiler-built tree is not inlined by CapturedQueries, so "
-            + "EntityExpression never rewrites its cells and the translator refuses "
-            + "the call (The method 'PostgreSqlWindows.Over' is not supported)."
-    )]
+    [Fact]
     public void ReadsAWindowWhoseSelectorIsHeldInAVariable()
     {
         Enumeration.AssertSameElements(

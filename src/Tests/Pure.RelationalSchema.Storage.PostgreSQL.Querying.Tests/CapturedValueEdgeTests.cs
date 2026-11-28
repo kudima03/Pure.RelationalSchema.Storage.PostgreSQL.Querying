@@ -15,7 +15,8 @@ namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying.Tests;
 public sealed record CapturedValueEdgeTests : IClassFixture<ExecutionFixture>
 {
     private const string UntypedNull =
-        "#111 (translator #144): a null captured value is written as an untyped NULL, ";
+        "#111 (translator #152): a null captured value is written as an untyped "
+        + "NULL, ";
 
     private readonly ExecutionFixture _fixture;
 
@@ -55,8 +56,7 @@ public sealed record CapturedValueEdgeTests : IClassFixture<ExecutionFixture>
 
     [Fact(
         Skip = UntypedNull
-            + "so a conditional of two nulls compared with a number fails: operator "
-            + "does not exist: text >= integer."
+            + "which PostgreSQL takes for text: operator does not exist: text >= integer."
     )]
     public void ComparesAConditionalOfANullCapturedValue()
     {
@@ -71,11 +71,7 @@ public sealed record CapturedValueEdgeTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = UntypedNull
-            + "so its sum fails: function sum(unknown) is not unique, where .NET "
-            + "gives 0."
-    )]
+    [Fact(Skip = UntypedNull + "so SUM has no type: function sum(unknown) is not unique.")]
     public void SumsANullCapturedValue()
     {
         long? none = null;
@@ -83,12 +79,7 @@ public sealed record CapturedValueEdgeTests : IClassFixture<ExecutionFixture>
         Enumeration.AssertSameValue(db => WithoutNull(db.Values).Sum(x => none));
     }
 
-    [Fact(
-        Skip = "#111 (translator #148): the translator refuses the Value of a null "
-            + "captured int? in "
-            + "the branch of a conditional its constant test never takes "
-            + "(DeferredConstant.Value is not supported), where .NET gives null."
-    )]
+    [Fact]
     public void RoundsToTheDigitsOfANullCapturedValue()
     {
         int? digits = null;
@@ -117,16 +108,14 @@ public sealed record CapturedValueEdgeTests : IClassFixture<ExecutionFixture>
         Enumeration.AssertSameValue(db => Ticks(Shifted(db.Values, time)));
     }
 
-    [Fact(
-        Skip = "#111 (translator #144): a captured TimeOnly of 23:59:59.9999995 is "
-            + "written as TIME '23:59:59.999999', so a value computed from it loses "
-            + "the ticks below a microsecond."
-    )]
-    public void ShiftsACapturedTimeFinerThanAMicrosecond()
+    // PostgreSQL holds a time to the microsecond, so the statement cannot hold the
+    // ticks below it.
+    [Fact]
+    public void RefusesACapturedTimeFinerThanAMicrosecond()
     {
         TimeOnly time = new TimeOnly(23, 59, 59).Add(TimeSpan.FromTicks(9_999_995));
 
-        Enumeration.AssertSameValue(db => Ticks(Shifted(db.Values, time)));
+        Enumeration.AssertNotSupported(db => Shifted(db.Values, time));
     }
 
     /// <summary>

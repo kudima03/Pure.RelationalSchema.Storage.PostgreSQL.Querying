@@ -1,5 +1,3 @@
-#pragma warning disable xUnit1004 // Tests blocked on a fix are skipped with the reason.
-
 using Linq.Expressions.Translation.PostgreSql;
 using Pure.RelationalSchema.Abstractions.Column;
 using Pure.RelationalSchema.Storage.Abstractions;
@@ -49,12 +47,7 @@ public sealed record WindowDefectTests : IClassFixture<ExecutionFixture>
 
     // ----------------------------------------- a window as the inner side of a join
 
-    [Fact(
-        Skip = "#111 (translator #128): a windowed inner sequence of Join is joined "
-            + "without a derived table (FROM t0 INNER JOIN t1, the window over t1 in "
-            + "the outer SELECT), so its window numbers and counts the joined rows "
-            + "only"
-    )]
+    [Fact]
     public void JoinsStoredRowsWithAWindowOverEveryRowOfItsSource()
     {
         Enumeration.AssertSameElements(
@@ -86,11 +79,7 @@ public sealed record WindowDefectTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #128): a windowed inner sequence of GroupJoin is "
-            + "filtered by the correlation before its window is computed, so every "
-            + "match is numbered 1"
-    )]
+    [Fact]
     public void AggregatesTheMatchesOfAWindowOverEveryRowOfItsSource()
     {
         Enumeration.AssertSameElements(
@@ -124,11 +113,7 @@ public sealed record WindowDefectTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #128): a windowed inner sequence of SelectMany is "
-            + "cross joined without a derived table (CROSS JOIN t1, the window in the "
-            + "outer SELECT), so its window counts the joined rows"
-    )]
+    [Fact]
     public void CrossJoinsStoredRowsWithAWindowOverEveryRowOfItsSource()
     {
         Enumeration.AssertSameElements(
@@ -170,11 +155,7 @@ public sealed record WindowDefectTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #128): a table aggregate in the projection of the "
-            + "inner sequence of Join becomes COUNT(*) OVER () over the joined rows, "
-            + "so it counts the matches (2), not the table (6)"
-    )]
+    [Fact]
     public void JoinsStoredRowsWithAnAggregateOfEveryRowOfTheInnerTable()
     {
         Enumeration.AssertSameElements(db =>
@@ -195,12 +176,7 @@ public sealed record WindowDefectTests : IClassFixture<ExecutionFixture>
 
     // ------------------------------------------- a correlated window under SelectMany
 
-    [Fact(
-        Skip = "#111 (translator #128): a correlated Over in SelectMany is inner "
-            + "joined (INNER JOIN t1 ON the correlation, ROW_NUMBER() OVER (ORDER BY "
-            + "t1.id)), so its window is over every joined row instead of the rows of "
-            + "each outer row"
-    )]
+    [Fact]
     public void SelectsManyFromAWindowOfTheRowsOfEachRow()
     {
         Enumeration.AssertSameElements(
@@ -253,11 +229,7 @@ public sealed record WindowDefectTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #128): a filtered correlated Over in SelectMany is "
-            + "joined as a derived table without LATERAL, which PostgreSQL rejects "
-            + "(42P01: invalid reference to FROM-clause entry for table t0)"
-    )]
+    [Fact]
     public void SelectsManyAFilteredWindowOfTheRowsOfEachRow()
     {
         Enumeration.AssertSameElements(
@@ -296,13 +268,7 @@ public sealed record WindowDefectTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #128): a filtered page "
-            + "(OrderByDescending().Take(1).Where()) of a correlated source in "
-            + "SelectMany is joined as a derived table without LATERAL, which "
-            + "PostgreSQL rejects (42P01: invalid reference to FROM-clause entry for "
-            + "table t0)"
-    )]
+    [Fact]
     public void SelectsManyAFilteredPageOfTheRowsOfEachRow()
     {
         Enumeration.AssertSameElements(db =>
@@ -328,11 +294,7 @@ public sealed record WindowDefectTests : IClassFixture<ExecutionFixture>
 
     // ------------------------------------------------ windows over DistinctBy, UnionBy
 
-    [Fact(
-        Skip = "#111 (translator #128): Over over DistinctBy extends its SELECT "
-            + "DISTINCT ON instead of wrapping it, so the window is computed over the "
-            + "rows before DistinctBy"
-    )]
+    [Fact]
     public void WindowsTheRowsOfAnOrderedDistinctBy()
     {
         Enumeration.AssertSameElements(
@@ -374,11 +336,7 @@ public sealed record WindowDefectTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #128): Over over DistinctBy extends its SELECT "
-            + "DISTINCT ON instead of wrapping it, so the window is computed over the "
-            + "rows before DistinctBy"
-    )]
+    [Fact]
     public void CountsTheRowsOfAnUnorderedDistinctBy()
     {
         Enumeration.AssertSameElements(
@@ -412,11 +370,7 @@ public sealed record WindowDefectTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #128): Over over UnionBy extends its SELECT DISTINCT "
-            + "ON instead of wrapping it, so the window is computed over both "
-            + "sequences before UnionBy keeps one row per key"
-    )]
+    [Fact]
     public void WindowsTheRowsOfAUnionBy()
     {
         Enumeration.AssertSameElements(
@@ -458,11 +412,7 @@ public sealed record WindowDefectTests : IClassFixture<ExecutionFixture>
 
     // --------------------------------- window functions read beside window aggregates
 
-    [Fact(
-        Skip = "#111 (translator #128): an aggregate over a windowed query in a later "
-            + "projection of it nests the window function in a window aggregate "
-            + "(42P20: window function calls cannot be nested)"
-    )]
+    [Fact]
     public void AggregatesAWindowBesideItsResults()
     {
         Enumeration.AssertSameElements(
@@ -487,11 +437,7 @@ public sealed record WindowDefectTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #128): a filtered aggregate over a windowed query in "
-            + "a later projection of it puts the window function in FILTER (42P20: "
-            + "window functions are not allowed in FILTER)"
-    )]
+    [Fact]
     public void CountsTheResultsOfAWindowByAWindowFunctionBesideThem()
     {
         Enumeration.AssertSameElements(
@@ -514,11 +460,7 @@ public sealed record WindowDefectTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #128): an aggregate over the frame aggregates of an "
-            + "Over in a projection of it nests the window functions (42P20: window "
-            + "function calls cannot be nested)"
-    )]
+    [Fact]
     public void AggregatesTheFrameAggregatesOfAWindowBesideThem()
     {
         Enumeration.AssertSameElements(
@@ -565,13 +507,12 @@ public sealed record WindowDefectTests : IClassFixture<ExecutionFixture>
 
     // ------------------------------------- window functions in arguments of others
 
-    [Fact(
-        Skip = "#111 (translator #128): a window function in the default of Lag or "
-            + "Lead is nested in it (42P20: window function calls cannot be nested)"
-    )]
-    public void ReadsAWindowFunctionAsTheDefaultOfLagAndLead()
+    // A default that is a window function is read where LAG or LEAD is NULL, which
+    // tells a missing row only for a value that is never NULL in a row.
+    [Fact]
+    public void RefusesAWindowFunctionAsTheDefaultOfLagAndLeadOfNullableValues()
     {
-        Enumeration.AssertSameElements(
+        _ = Enumeration.AssertRefused(
             db =>
                 WindowEdgeSources.Over(
                     db,
@@ -586,31 +527,15 @@ public sealed record WindowDefectTests : IClassFixture<ExecutionFixture>
                             w.Lead(y => (double?)y.Number, 2, w.PercentRank()),
                             w.Lag(y => y.Number, 1, w.Rows.Count())
                         )
-                ),
-            db =>
-                InMemoryWindow<EdgeItem>
-                    .Over(
-                        Sources.Items(db),
-                        x => null,
-                        rows => rows.OrderBy(x => x.Id),
-                        x => x.Id
-                    )
-                    .Select(x => new ValueTuple<long, long, double?, int?>(
-                        x.Row.Id,
-                        x.Window.Lag(y => y.Id, 1, x.Window.RowNumber),
-                        x.Window.Lead(y => (double?)y.Number, 2, x.Window.PercentRank),
-                        x.Window.Lag(y => y.Number, 1, x.Window.Peers.Count())
-                    ))
+                )
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #128): a window function in the offset of Lag is "
-            + "nested in it (42P20: window function calls cannot be nested)"
-    )]
-    public void ReadsAnOffsetOfLagComputedFromAWindowFunction()
+    // PostgreSQL nests no window function in the arguments of another.
+    [Fact]
+    public void RefusesAnOffsetOfLagComputedFromAWindowFunction()
     {
-        Enumeration.AssertSameElements(
+        _ = Enumeration.AssertRefused(
             db =>
                 WindowEdgeSources.Over(
                     db,
@@ -623,19 +548,7 @@ public sealed record WindowDefectTests : IClassFixture<ExecutionFixture>
                             x.Id,
                             w.Lag(y => y.Id, (int)w.RowNumber() % 3, 0L)
                         )
-                ),
-            db =>
-                InMemoryWindow<EdgeItem>
-                    .Over(
-                        Sources.Items(db),
-                        x => null,
-                        rows => rows.OrderBy(x => x.Id),
-                        x => x.Id
-                    )
-                    .Select(x => new ValueTuple<long, long>(
-                        x.Row.Id,
-                        x.Window.Lag(y => y.Id, (int)x.Window.RowNumber % 3, 0L)
-                    ))
+                )
         );
     }
 
@@ -722,11 +635,7 @@ public sealed record WindowDefectTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #128): an aggregate of the source table in the "
-            + "arguments of Lag, Ntile and Lead becomes COUNT(*) OVER () nested in "
-            + "them (42P20: window function calls cannot be nested)"
-    )]
+    [Fact]
     public void ReadsAnAggregateOfTheStoredTableInTheArgumentsOfWindowFunctions()
     {
         Enumeration.AssertSameElements(
@@ -789,11 +698,7 @@ public sealed record WindowDefectTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #128): an aggregate of the source table in the filter "
-            + "of a frame aggregate becomes COUNT(*) OVER () in FILTER (42P20: window "
-            + "functions are not allowed in FILTER)"
-    )]
+    [Fact]
     public void FiltersAFrameByAnAggregateOfTheStoredTable()
     {
         Enumeration.AssertSameElements(

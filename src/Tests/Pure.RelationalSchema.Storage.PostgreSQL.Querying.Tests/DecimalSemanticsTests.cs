@@ -17,17 +17,10 @@ namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying.Tests;
 /// </summary>
 public sealed record DecimalSemanticsTests : IClassFixture<ExecutionFixture>
 {
-    private const string WholeConstant =
-        "#111 (translator #144): a whole decimal constant is written as an integer "
-        + "literal, ";
-
-    private const string NumericScale =
-        "#111 (translator #145): numeric keeps a scale of its own, not the 28 "
-        + "significant digits of a decimal: ";
-
-    private const string NumericPrecision =
-        "#111 (translator #144): numeric is not held to the precision of a decimal, "
-        + "so the exact ";
+    private const string ExactNumeric =
+        "PostgreSQL keeps a sum or a product of numerics exact where a decimal rounds "
+        + "it to its 28 or 29 significant digits, and the exact value is read into no "
+        + "decimal.";
 
     private readonly ExecutionFixture _fixture;
 
@@ -81,10 +74,7 @@ public sealed record DecimalSemanticsTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = WholeConstant
-            + "so (flag ? 250m : -250m) / 100m divides integers: 2, not 2.5."
-    )]
+    [Fact]
     public void DividesAWholeDecimalConstantAsADecimal()
     {
         Enumeration.AssertSameValue(db =>
@@ -94,11 +84,7 @@ public sealed record DecimalSemanticsTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = WholeConstant
-            + "so Math.Round(250m / 100m, AwayFromZero) * 100m of a conditional is 200, "
-            + "not 300."
-    )]
+    [Fact]
     public void RoundsAWholeDecimalConstantToHundredsAwayFromZero()
     {
         Enumeration.AssertSameValue(db =>
@@ -111,11 +97,7 @@ public sealed record DecimalSemanticsTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = WholeConstant
-            + "so Math.Round(250m / 100m, ToEven) of a conditional fails: function "
-            + "mod(double precision, integer) does not exist."
-    )]
+    [Fact]
     public void RoundsAWholeDecimalConstantToHundredsToEven()
     {
         Enumeration.AssertSameValue(db =>
@@ -134,11 +116,7 @@ public sealed record DecimalSemanticsTests : IClassFixture<ExecutionFixture>
         Enumeration.AssertSameValue(db => WithoutNull(db.Values).Sum(x => big));
     }
 
-    [Fact(
-        Skip = NumericPrecision
-            + "65535 + 0.0000000000000000000000000001 of a cell is not rounded to 28 "
-            + "significant digits and fails to read (OverflowException)."
-    )]
+    [Fact(Skip = ExactNumeric)]
     public void RoundsAnAdditionPastThePrecisionOfADecimal()
     {
         decimal tiny = 0.0000000000000000000000000001m;
@@ -151,12 +129,7 @@ public sealed record DecimalSemanticsTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = NumericPrecision
-            + "SUM of 9 and ten times 0.0000000000000000000000000001 fails to read "
-            + "(OverflowException), where .NET rounds it to "
-            + "9.000000000000000000000000000."
-    )]
+    [Fact(Skip = ExactNumeric)]
     public void RoundsAnAggregatedSumPastThePrecisionOfADecimal()
     {
         decimal tiny = 0.0000000000000000000000000001m;
@@ -167,7 +140,7 @@ public sealed record DecimalSemanticsTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = NumericScale + "1m / 3m is 0.33333333333333333333, not 28 digits.")]
+    [Fact]
     public void DividesDecimalsTo28Digits()
     {
         Enumeration.AssertSameValue(db =>
@@ -180,11 +153,7 @@ public sealed record DecimalSemanticsTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = NumericScale
-            + "a quotient of 1m / 3m equal to 0.3333333333333333333333333333m keeps no "
-            + "row."
-    )]
+    [Fact]
     public void FiltersByADecimalQuotientTo28Digits()
     {
         Enumeration.AssertSameElements(db =>
@@ -197,11 +166,7 @@ public sealed record DecimalSemanticsTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = NumericScale
-            + "18446744073709551615m / 100m is 184467440737095516, the 16 significant "
-            + "digits of numeric division, not 184467440737095516.15."
-    )]
+    [Fact]
     public void DividesAWideDecimalTo28Digits()
     {
         Enumeration.AssertSameValue(db =>
@@ -217,11 +182,7 @@ public sealed record DecimalSemanticsTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #144): numeric division rounds "
-            + "250.0000000000000000000000001m / 100m to the scale of its operand, "
-            + "2.5000000000000000000000000, so Math.Round(..., ToEven) is 2, not 3."
-    )]
+    [Fact]
     public void RoundsAQuotientJustAboveAMidpointToEven()
     {
         decimal fine = 250.0000000000000000000000001m;
@@ -239,11 +200,7 @@ public sealed record DecimalSemanticsTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = NumericScale
-            + "a product keeps every decimal place, 30 for 0.111111111111111m squared, "
-            + "and fails to read (OverflowException)."
-    )]
+    [Fact(Skip = ExactNumeric)]
     public void MultipliesDecimalsTo28DecimalPlaces()
     {
         decimal factor = 0.111111111111111m;
@@ -258,7 +215,7 @@ public sealed record DecimalSemanticsTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(Skip = NumericScale + "AVG keeps 20 significant digits.")]
+    [Fact]
     public void AveragesDecimalsTo28Digits()
     {
         Enumeration.AssertSameValue(db =>

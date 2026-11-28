@@ -3,9 +3,6 @@ using System.Linq.Expressions;
 using Pure.RelationalSchema.Abstractions.Column;
 using Pure.RelationalSchema.Storage.Abstractions;
 
-// The tests of recursions the translation does not run yet are skipped until it does.
-#pragma warning disable xUnit1004
-
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying.Tests;
 
 /// <summary>
@@ -449,12 +446,7 @@ public sealed record RecursionShapeTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #142): translator matches the step's columns to the seed's "
-            + "case-insensitively (Translator.Stepped), so members Id and ID throw "
-            + "ArgumentException 'An item with the same key has already been added. "
-            + "Key: ID'"
-    )]
+    [Fact]
     public void WalksASeedOfMembersWhoseNamesDifferByCase()
     {
         AssertWalk(
@@ -1044,8 +1036,8 @@ public sealed record RecursionShapeTests : IClassFixture<ExecutionFixture>
                             x.Id,
                             x.Whole + 1,
                             (short)(x.Short + 2),
-                            (byte)(x.Byte + 3),
-                            (ushort)(x.Unsigned + 4),
+                            x.Byte,
+                            x.Unsigned,
                             x.Amount + 0.5m,
                             x.Measure + 1.25,
                             x.Ratio,
@@ -1073,14 +1065,48 @@ public sealed record RecursionShapeTests : IClassFixture<ExecutionFixture>
         );
     }
 
+    // A conversion to a byte or to an unsigned short wraps in C#, which a cast to
+    // the wider PostgreSQL type that holds it does not.
+    [Fact]
+    public void RefusesAByteOrAnUnsignedShortComputedInAStep()
+    {
+        _ = Enumeration.AssertRefused(db =>
+            MarkerCalls.WithRecursive(
+                db.Values.Where(x => long.Parse(x.Cells[ValueId].Value.TextValue) < 5)
+                    .Select(x => new ValueTuple<long, byte>(
+                        long.Parse(x.Cells[ValueId].Value.TextValue),
+                        0
+                    )),
+                level =>
+                    level
+                        .Where(x => x.Item2 < 3)
+                        .Select(x => new ValueTuple<long, byte>(
+                            x.Item1,
+                            (byte)(x.Item2 + 3)
+                        ))
+            )
+        );
+        _ = Enumeration.AssertRefused(db =>
+            MarkerCalls.WithRecursive(
+                db.Values.Where(x => long.Parse(x.Cells[ValueId].Value.TextValue) < 5)
+                    .Select(x => new ValueTuple<long, ushort>(
+                        long.Parse(x.Cells[ValueId].Value.TextValue),
+                        0
+                    )),
+                level =>
+                    level
+                        .Where(x => x.Item2 < 3)
+                        .Select(x => new ValueTuple<long, ushort>(
+                            x.Item1,
+                            (ushort)(x.Item2 + 4)
+                        ))
+            )
+        );
+    }
+
     // PostgreSQL types the column by the seed, real, and fails the statement where
     // the step yields another type for it.
-    [Fact(
-        Skip = "#111 (translator #131): translator renders the float constant of x.Ratio + 0.5f as "
-            + "the numeric 0.5, so real + numeric is double precision and PostgreSQL "
-            + "fails: recursive query column has type real in non-recursive term but "
-            + "type double precision overall"
-    )]
+    [Fact]
     public void AddsAFloatConstantToAFloatColumnOfALevel()
     {
         AssertWalk(
@@ -1105,8 +1131,8 @@ public sealed record RecursionShapeTests : IClassFixture<ExecutionFixture>
                             x.Id,
                             x.Whole + 1,
                             (short)(x.Short + 2),
-                            (byte)(x.Byte + 3),
-                            (ushort)(x.Unsigned + 4),
+                            x.Byte,
+                            x.Unsigned,
                             x.Amount + 0.5m,
                             x.Measure + 1.25,
                             x.Ratio + 0.5f,
@@ -1245,12 +1271,7 @@ public sealed record RecursionShapeTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #131): translator renders the float constant of x * 3 (3f) as the "
-            + "integer 3, so real * integer is double precision and PostgreSQL fails: "
-            + "recursive query column has type real in non-recursive term but type "
-            + "double precision overall"
-    )]
+    [Fact]
     public void WalksAnInMemorySeedOfFloats()
     {
         float[] seed = [0.5f, -1.25f, 3f];

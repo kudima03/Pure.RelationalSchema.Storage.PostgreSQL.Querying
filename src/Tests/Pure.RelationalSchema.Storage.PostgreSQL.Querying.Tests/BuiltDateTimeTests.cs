@@ -1,9 +1,7 @@
 using System.Globalization;
+using Npgsql;
 using Pure.RelationalSchema.Abstractions.Column;
 using Xunit.Abstractions;
-
-// The tests of semantics the translation does not keep yet are skipped until it does.
-#pragma warning disable xUnit1004
 
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying.Tests;
 
@@ -45,6 +43,8 @@ public sealed record BuiltDateTimeTests : IClassFixture<ExecutionFixture>
     private IColumn Clock => _fixture.Clock;
 
     private BuiltValueComparison Comparison => new BuiltValueComparison(_fixture, _output);
+
+    private ExecutionComparison Enumeration => new ExecutionComparison(_fixture);
 
     [Fact]
     public void BuildsDatesFromIntegerPartsOfCells()
@@ -309,10 +309,7 @@ public sealed record BuiltDateTimeTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #129): a DateTime constant of the kind Utc is written as a TIMESTAMP"
-            + " literal and read back with the kind Unspecified."
-    )]
+    [Fact]
     public void ReadsAConstantDateTimeOfTheKindUtc()
     {
         Comparison.AssertSameElements(db =>
@@ -323,14 +320,12 @@ public sealed record BuiltDateTimeTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #129): CASE over a DateTime built with the kind Utc (timestamptz) and"
-            + " one without (timestamp) is a timestamptz, read with the kind Utc for"
-            + " both."
-    )]
-    public void ChoosesBetweenDateTimesOfDifferentKinds()
+    // A column is a timestamp or a timestamptz: no column holds a value that is of
+    // the kind Utc on some rows and Unspecified on others.
+    [Fact]
+    public void RefusesAChoiceBetweenDateTimesOfDifferentKinds()
     {
-        Comparison.AssertSameElements(db =>
+        Enumeration.AssertNotSupported(db =>
             db.Values.Where(x => long.Parse(x.Cells[ValueId].Value.TextValue) < 13)
                 .Select(x => (int)long.Parse(x.Cells[ValueId].Value.TextValue))
                 .Select(x =>
@@ -464,13 +459,12 @@ public sealed record BuiltDateTimeTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #130): new TimeOnly(ticks) of a computed count of ticks drops the ticks"
-            + " below a microsecond, which .NET keeps."
-    )]
-    public void BuildsTimesFromTicksBelowAMicrosecond()
+    // PostgreSQL holds a time to the microsecond: ticks below it, which no value
+    // read back would hold, fail the statement.
+    [Fact]
+    public void FailsOnTimesBuiltFromTicksBelowAMicrosecond()
     {
-        Comparison.AssertSameElements(db =>
+        Enumeration.AssertFails<PostgresException>(db =>
             db.Values.Where(x => long.Parse(x.Cells[ValueId].Value.TextValue) < 90)
                 .Select(x => long.Parse(x.Cells[ValueId].Value.TextValue))
                 .Select(x => new TimeOnly(x * 15))
@@ -796,15 +790,12 @@ public sealed record BuiltDateTimeTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #129): FirstOrDefault of a filtered group of DateTimes built with the"
-            + " kind Utc gives the default as COALESCE(timestamptz, TIMESTAMP"
-            + " '0001-01-01'), read with the kind Utc, where default(DateTime) is"
-            + " Unspecified."
-    )]
-    public void ReadsTheDefaultOfAGroupOfDateTimesOfTheKindUtc()
+    // The default of a DateTime is of the kind Unspecified, beside values of the
+    // kind Utc in one column.
+    [Fact]
+    public void RefusesTheDefaultOfAGroupOfDateTimesOfTheKindUtc()
     {
-        Comparison.AssertSameElements(db =>
+        Enumeration.AssertNotSupported(db =>
             db.Values.GroupBy(x => x.Cells[Flag].Value.TextValue)
                 .Select(x => new ValueTuple<string, DateTime>(
                     x.Key,

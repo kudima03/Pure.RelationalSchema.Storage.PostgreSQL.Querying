@@ -1,9 +1,6 @@
 using Pure.RelationalSchema.Abstractions.Column;
 using Xunit.Abstractions;
 
-// The tests of semantics the translation does not keep yet are skipped until it does.
-#pragma warning disable xUnit1004
-
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying.Tests;
 
 /// <summary>
@@ -52,11 +49,7 @@ public sealed record TranslatorDefectValueTests : IClassFixture<ExecutionFixture
 
     private ExecutionComparison Enumeration => new ExecutionComparison(_fixture);
 
-    [Fact(
-        Skip = "#111 (translator #128): Distinct().Take(n) of VALUES is SELECT DISTINCT "
-            + "... LIMIT n, which keeps any n distinct values, where LINQ keeps the "
-            + "first occurrences in the order of the sequence (also translator #134)."
-    )]
+    [Fact]
     public void TakesTheFirstDistinctValuesOfAnInMemoryRootInSequenceOrder()
     {
         int[] numbers = [3, 1, 3, 2];
@@ -73,11 +66,7 @@ public sealed record TranslatorDefectValueTests : IClassFixture<ExecutionFixture
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #128): Distinct().Skip(n) of VALUES skips any n "
-            + "distinct values, where LINQ skips the first occurrences in the order of "
-            + "the sequence (also translator #134)."
-    )]
+    [Fact]
     public void SkipsTheFirstDistinctValuesOfAnInMemorySequenceJoinedToARow()
     {
         int[] numbers = [3, 1, 3, 2];
@@ -90,11 +79,7 @@ public sealed record TranslatorDefectValueTests : IClassFixture<ExecutionFixture
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #128): GroupBy().Take(n) of VALUES is GROUP BY ... "
-            + "LIMIT n, which keeps any n groups, where LINQ keeps the groups in the "
-            + "order of their first elements (also translator #134)."
-    )]
+    [Fact]
     public void TakesTheFirstGroupsOfAnInMemoryRootInSequenceOrder()
     {
         int[] numbers = [3, 1, 3, 2];
@@ -112,11 +97,7 @@ public sealed record TranslatorDefectValueTests : IClassFixture<ExecutionFixture
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #128): a one-element in-memory query is taken for the "
-            + "one-row root wherever it is, so Any over it in a filter is refused, where "
-            + "a one-element array works (also translator #137)."
-    )]
+    [Fact]
     public void FiltersByTheExistenceOfAMatchInAnInMemoryQueryOfOneElement()
     {
         long[] ids = [4];
@@ -130,11 +111,7 @@ public sealed record TranslatorDefectValueTests : IClassFixture<ExecutionFixture
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #128): Max and Min of new T[n] are GREATEST(n) and "
-            + "LEAST(n), the length of the array read as its only element, where the "
-            + "array holds n zeros or n nulls."
-    )]
+    [Fact]
     public void TakesTheExtremesOfArraysOfDefaultsSizedByACell()
     {
         Comparison.AssertSameElements(db =>
@@ -149,11 +126,7 @@ public sealed record TranslatorDefectValueTests : IClassFixture<ExecutionFixture
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #128): C# 14 binds Max and Min of a captured int[] to "
-            + "MemoryExtensions over a ReadOnlySpan, which the translator refuses (\"The "
-            + "method 'MemoryExtensions.Max' is not supported.\") instead of folding it."
-    )]
+    [Fact]
     public void FoldsTheExtremesOfACapturedArray()
     {
         int[] values = [3, 9, 4];
@@ -169,12 +142,7 @@ public sealed record TranslatorDefectValueTests : IClassFixture<ExecutionFixture
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #128): Max and Min of a group with "
-            + "StringComparer.Ordinal are MAX and MIN in the \"C\" collation, which "
-            + "compares code points, where .NET compares UTF-16 code units: U+1F600 "
-            + "orders after U+FF21 in SQL, before it in .NET (also translator #133)."
-    )]
+    [Fact]
     public void TakesTheOrdinalExtremesOfAGroupInUtf16Order()
     {
         Comparison.AssertSameElements(db =>
@@ -201,11 +169,7 @@ public sealed record TranslatorDefectValueTests : IClassFixture<ExecutionFixture
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #128): STRING_AGG in a subquery whose arguments are "
-            + "outer values only is an aggregate of the outer query, which PostgreSQL "
-            + "rejects (42803)."
-    )]
+    [Fact]
     public void JoinsTheOuterValuesOfASubquery()
     {
         Comparison.AssertSameElements(db =>
@@ -223,11 +187,7 @@ public sealed record TranslatorDefectValueTests : IClassFixture<ExecutionFixture
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #128): STRING_AGG of a GroupJoin group whose arguments "
-            + "are outer values only is an aggregate of the outer query, which "
-            + "PostgreSQL rejects (42803)."
-    )]
+    [Fact]
     public void JoinsTheOuterValuesOfGroupJoinGroups()
     {
         Comparison.AssertSameElements(db =>
@@ -249,11 +209,7 @@ public sealed record TranslatorDefectValueTests : IClassFixture<ExecutionFixture
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #128): MAX in a subquery whose argument is an outer "
-            + "value only is an aggregate of the outer query, which PostgreSQL rejects "
-            + "(42803)."
-    )]
+    [Fact]
     public void TakesTheOrdinalMaximumOfTheOuterValuesOfASubquery()
     {
         Comparison.AssertSameElements(db =>
@@ -269,11 +225,7 @@ public sealed record TranslatorDefectValueTests : IClassFixture<ExecutionFixture
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #128): SUM in a subquery whose argument is an outer "
-            + "value only is an aggregate of the outer query, which PostgreSQL rejects "
-            + "(42803)."
-    )]
+    [Fact]
     public void SumsTheOuterValuesOfASubquery()
     {
         Comparison.AssertSameElements(db =>
@@ -288,11 +240,7 @@ public sealed record TranslatorDefectValueTests : IClassFixture<ExecutionFixture
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #128): a separator that aggregates the group is nested "
-            + "in STRING_AGG, which PostgreSQL rejects (42803: aggregate function calls "
-            + "cannot be nested)."
-    )]
+    [Fact]
     public void JoinsTheTextsOfAGroupWithASeparatorThatAggregatesIt()
     {
         Comparison.AssertSameElements(db =>
@@ -323,11 +271,7 @@ public sealed record TranslatorDefectValueTests : IClassFixture<ExecutionFixture
         });
     }
 
-    [Fact(
-        Skip = "#111 (translator #128): Last of the distinct values of an ordered group "
-            + "is the value of the last element ((ARRAY_AGG(... ORDER BY ... DESC))[1]), "
-            + "not the last of the distinct values."
-    )]
+    [Fact]
     public void ReadsTheLastOfTheDistinctValuesOfAnOrderedGroup()
     {
         Comparison.AssertSameElements(db =>
@@ -348,11 +292,7 @@ public sealed record TranslatorDefectValueTests : IClassFixture<ExecutionFixture
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #128): string.Join of a group ignores the order of the "
-            + "source before GroupBy: STRING_AGG has no ORDER BY, where LINQ keeps the "
-            + "elements of a group in the order of the source (also translator #134)."
-    )]
+    [Fact]
     public void JoinsTheTextsOfGroupsOfAnOrderedSourceInTheOrderOfTheSource()
     {
         Comparison.AssertSameElements(db =>
@@ -370,11 +310,7 @@ public sealed record TranslatorDefectValueTests : IClassFixture<ExecutionFixture
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #128): First and Last of a group sorted by a key that "
-            + "ties ignore the order of the source before GroupBy, where LINQ sorts "
-            + "stably in it (also translator #134)."
-    )]
+    [Fact]
     public void BreaksTiesOfGroupsOfAnOrderedSourceInTheOrderOfTheSource()
     {
         Comparison.AssertSameElements(db =>

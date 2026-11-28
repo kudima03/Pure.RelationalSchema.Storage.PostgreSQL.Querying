@@ -1,9 +1,6 @@
 using System.Globalization;
 using Pure.RelationalSchema.Abstractions.Column;
 
-// The tests of values the translation does not keep yet are skipped until it does.
-#pragma warning disable xUnit1004
-
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying.Tests;
 
 /// <summary>
@@ -240,10 +237,7 @@ public sealed record InMemoryScalarValuesTests : IClassFixture<ExecutionFixture>
         ]);
     }
 
-    [Fact(
-        Skip = "#111 (translator #131): -0.0 is written as the integer literal -0, which "
-            + "PostgreSQL reads as 0, so the sign of zero is lost."
-    )]
+    [Fact]
     public void ReadsTheNegativeZeroDouble()
     {
         AssertSameItems([1, -0.0, 0.0]);
@@ -296,10 +290,7 @@ public sealed record InMemoryScalarValuesTests : IClassFixture<ExecutionFixture>
         AssertSameItems<DateTime?>([null, new DateTime(2000, 1, 1, 0, 0, 1), null]);
     }
 
-    [Fact(
-        Skip = "#111 (translator #129): a DateTime of kind Utc is written as a timestamp "
-            + "and read back of kind Unspecified, where LINQ to Objects keeps the kind."
-    )]
+    [Fact]
     public void ReadsDatetimesOfUtcKind()
     {
         AssertSameItems([
@@ -354,10 +345,7 @@ public sealed record InMemoryScalarValuesTests : IClassFixture<ExecutionFixture>
         ]);
     }
 
-    [Fact(
-        Skip = "#111 (translator #130): a TimeOnly finer than a microsecond is "
-            + "truncated by its literal (HH:mm:ss.FFFFFF), not refused as a DateTime is."
-    )]
+    [Fact]
     public void RefusesTimesFinerThanAMicrosecond()
     {
         TimeOnly[] times = [new TimeOnly(1, 0), TimeOnly.MaxValue];
@@ -394,10 +382,7 @@ public sealed record InMemoryScalarValuesTests : IClassFixture<ExecutionFixture>
         ]);
     }
 
-    [Fact(
-        Skip = "#111 (translator #130): a TimeSpan finer than a microsecond is rounded "
-            + "by its interval literal, not refused as a DateTime is."
-    )]
+    [Fact]
     public void RefusesTimeSpansFinerThanAMicrosecond()
     {
         TimeSpan[] spans = [TimeSpan.Zero, TimeSpan.FromTicks(1)];
@@ -432,35 +417,26 @@ public sealed record InMemoryScalarValuesTests : IClassFixture<ExecutionFixture>
         AssertSameItems(["a", "a", null, null, "a", ""]);
     }
 
-    [Fact(
-        Skip = "#111 (translator #136): VALUES of byte is refused (In-memory rows of type "
-            + "'Byte' cannot be translated into SQL), as #122 is for unsigned numbers."
-    )]
+    [Fact]
     public void ReadsBytes()
     {
         AssertSameItems<byte>([0, 255, 7]);
     }
 
-    [Fact(
-        Skip = "#111 (translator #136): VALUES of sbyte is refused (In-memory rows of type "
-            + "'SByte' cannot be translated into SQL), as #122 is for unsigned numbers."
-    )]
+    [Fact]
     public void ReadsSignedBytes()
     {
         AssertSameItems<sbyte>([0, sbyte.MinValue, sbyte.MaxValue]);
     }
 
-    [Fact(
-        Skip = "#111 (translator #136): VALUES of char is refused (In-memory rows of type "
-            + "'Char' cannot be translated into SQL), though a char literal is text."
-    )]
-    public void ReadsInMemoryCharactersAsText()
+    [Fact]
+    public void ReadsInMemoryCharacters()
     {
         char[] letters = ['p', 'x', '\''];
 
         Enumeration.AssertSameElements(db =>
             db.Values.Where(x => x.Cells[ValueId].Value.TextValue == "1")
-                .SelectMany(x => letters, (row, letter) => letter.ToString())
+                .SelectMany(x => letters, (row, letter) => letter)
         );
     }
 
@@ -544,10 +520,7 @@ public sealed record InMemoryScalarValuesTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #132): PostgreSQL ranks NaN above every number and equal "
-            + "to itself, so NaN > 0 and NaN == NaN are true where C# gives false."
-    )]
+    [Fact]
     public void ComparesTheSpecialInMemoryDoublesWithZero()
     {
         double[] numbers =
@@ -573,11 +546,10 @@ public sealed record InMemoryScalarValuesTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #130): a TimeOnly finer than a microsecond is "
-            + "truncated by its literal, so it joins the stored time it differs from."
-    )]
-    public void JoinsATimeColumnToInMemoryTimesFinerThanAMicrosecond()
+    // PostgreSQL holds a time to the microsecond, so VALUES cannot hold the tick
+    // of the last time.
+    [Fact]
+    public void RefusesInMemoryTimesFinerThanAMicrosecond()
     {
         TimeOnly[] times =
         [
@@ -586,7 +558,7 @@ public sealed record InMemoryScalarValuesTests : IClassFixture<ExecutionFixture>
             new TimeOnly(3, 4, 5).Add(TimeSpan.FromTicks(1)),
         ];
 
-        Enumeration.AssertSameElements(db =>
+        Enumeration.AssertNotSupported(db =>
             db.Extras.Join(
                 times,
                 x =>

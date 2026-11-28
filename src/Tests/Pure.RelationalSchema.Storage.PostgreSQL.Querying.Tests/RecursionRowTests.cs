@@ -3,9 +3,6 @@ using System.Linq.Expressions;
 using Pure.RelationalSchema.Abstractions.Column;
 using Pure.RelationalSchema.Storage.Abstractions;
 
-// The tests of recursions the translation does not run yet are skipped until it does.
-#pragma warning disable xUnit1004
-
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying.Tests;
 
 /// <summary>
@@ -380,11 +377,7 @@ public sealed record RecursionRowTests : IClassFixture<ExecutionFixture>
 
     // The seed has a row for every element, the step finds none for some: those
     // elements of the walk hold no row, as in memory, not a row of empty cells.
-    [Fact(
-        Skip = "#111: the walk is read with the element of its seed only "
-            + "(QueryElement.Of), whose row is not optional, so a row the step's "
-            + "DefaultIfEmpty finds none for is read as a row of empty cells, not null"
-    )]
+    [Fact]
     public void ReadsTheMissingRowsOfAnOuterJoinInTheStep()
     {
         Enumeration.AssertSameElements(
@@ -415,11 +408,7 @@ public sealed record RecursionRowTests : IClassFixture<ExecutionFixture>
     }
 
     // The first walk has a row for every element, the second none for some.
-    [Fact(
-        Skip = "#111: a set operation is read with the element of its first side "
-            + "only (QueryElement.Of), whose row is not optional, so the missing rows "
-            + "of the second side are read as rows of empty cells, not null"
-    )]
+    [Fact]
     public void ReadsTheMissingRowsOfTheSecondOfTwoConcatenatedWalks()
     {
         Enumeration.AssertSameElements(
@@ -441,11 +430,7 @@ public sealed record RecursionRowTests : IClassFixture<ExecutionFixture>
     }
 
     // The same without a walk: the second side of a concatenation of stored rows.
-    [Fact(
-        Skip = "#111: a set operation is read with the element of its first side "
-            + "only (QueryElement.Of), whose row is not optional, so the missing rows "
-            + "of the second side are read as rows of empty cells, not null"
-    )]
+    [Fact]
     public void ReadsTheMissingRowsOfTheSecondSideOfAConcatenation()
     {
         Enumeration.AssertSameElements(db =>

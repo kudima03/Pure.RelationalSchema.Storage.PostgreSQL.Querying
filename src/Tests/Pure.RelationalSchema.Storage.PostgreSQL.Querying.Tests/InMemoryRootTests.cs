@@ -1,9 +1,6 @@
 using System.Linq.Expressions;
 using Pure.RelationalSchema.Abstractions.Column;
 
-// The tests of semantics the translation does not keep yet are skipped until it does.
-#pragma warning disable xUnit1004
-
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying.Tests;
 
 /// <summary>
@@ -215,11 +212,7 @@ public sealed record InMemoryRootTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #134): OrderBy over VALUES is not stable, ties come back in "
-            + "the order the sort leaves them, where LINQ to Objects keeps the sequence "
-            + "order."
-    )]
+    [Fact]
     public void OrdersTiesOfAnInMemoryRootInTheOrderOfTheSequence()
     {
         (long Key, long Position)[] items =
@@ -239,11 +232,7 @@ public sealed record InMemoryRootTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #134): OrderBy over VALUES is not stable, ties come back in "
-            + "the order the sort leaves them, where LINQ to Objects keeps the sequence "
-            + "order."
-    )]
+    [Fact]
     public void OrdersTiesOfAnInMemorySequenceJoinedToARowInTheOrderOfTheSequence()
     {
         (long Key, long Position)[] items =

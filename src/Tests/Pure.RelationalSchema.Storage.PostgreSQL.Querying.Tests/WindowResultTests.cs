@@ -1,5 +1,3 @@
-#pragma warning disable xUnit1004 // Tests blocked on a fix are skipped with the reason.
-
 using Linq.Expressions.Translation.PostgreSql;
 using Pure.RelationalSchema.Abstractions.Column;
 using Pure.RelationalSchema.Storage.Abstractions;
@@ -490,11 +488,7 @@ public sealed record WindowResultTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #141): translator refuses Queryable.DefaultIfEmpty as the source of "
-            + "Over (\"The method 'Queryable.DefaultIfEmpty' is not supported.\"), "
-            + "though it translates DefaultIfEmpty before an aggregate"
-    )]
+    [Fact]
     public void WindowsTheDefaultOfAProjectionOfNoRows()
     {
         Enumeration.AssertSameElements(
@@ -516,17 +510,19 @@ public sealed record WindowResultTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact]
-    public void RefusesAWindowOverTheDefaultOfNoStoredRows()
+    public void WindowsTheDefaultOfNoStoredRows()
     {
-        _ = Enumeration.AssertRefused(db =>
-            MarkerCalls.Over(
-                db.Values.Where(x => x.Cells[Text].Value.TextValue == "none")
-                    .DefaultIfEmpty(),
-                null,
-                null,
-                null,
-                (row, w) => new ValueTuple<IRow?, long>(row, w.RowNumber())
-            )
+        Enumeration.AssertSameElements(
+            db =>
+                MarkerCalls.Over(
+                    db.Values.Where(x => x.Cells[Text].Value.TextValue == "none")
+                        .DefaultIfEmpty(),
+                    null,
+                    null,
+                    null,
+                    (row, w) => new ValueTuple<IRow?, long>(row, w.RowNumber())
+                ),
+            db => new[] { new ValueTuple<IRow?, long>(null, 1) }.AsQueryable()
         );
     }
 

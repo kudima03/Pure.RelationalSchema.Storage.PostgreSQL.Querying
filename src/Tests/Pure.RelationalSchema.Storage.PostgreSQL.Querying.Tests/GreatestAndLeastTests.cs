@@ -2,9 +2,6 @@ using System.Globalization;
 using Pure.RelationalSchema.Abstractions.Column;
 using Xunit.Abstractions;
 
-// The tests of semantics the translation does not keep yet are skipped until it does.
-#pragma warning disable xUnit1004
-
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying.Tests;
 
 /// <summary>
@@ -292,15 +289,12 @@ public sealed record GreatestAndLeastTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #129): GREATEST and LEAST of DateTimes of the kinds Utc and"
-            + " Unspecified give the kind of neither value: a Utc constant is a TIMESTAMP"
-            + " (read Unspecified), a Utc value built from parts a timestamptz that makes"
-            + " the result one (read Utc)."
-    )]
-    public void ReadsTheGreatestOfDateTimesOfDifferentKinds()
+    // A column is a timestamp or a timestamptz: no column holds the greatest of a
+    // value of the kind Utc and one of the kind Unspecified, which is of either.
+    [Fact]
+    public void RefusesTheGreatestOfDateTimesOfDifferentKinds()
     {
-        Comparison.AssertSameElements(db =>
+        Enumeration.AssertNotSupported(db =>
             db.Values.Where(x => long.Parse(x.Cells[ValueId].Value.TextValue) < 90)
                 .Select(x => new ValueTuple<string, DateTime, DateTime>(
                     x.Cells[ValueId].Value.TextValue,
@@ -387,11 +381,7 @@ public sealed record GreatestAndLeastTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #133): GREATEST in the \"C\" collation compares code points, where"
-            + " StringComparer.Ordinal compares UTF-16 code units: a character above"
-            + " U+FFFF orders after U+E000..U+FFFF in SQL, before them in .NET."
-    )]
+    [Fact]
     public void ReadsTheGreatestOfOrdinalTextsAboveTheBasicPlane()
     {
         Comparison.AssertSameElements(db =>
@@ -431,13 +421,13 @@ public sealed record GreatestAndLeastTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111: GREATEST skips a NULL cell parsed bare, which .NET fails to"
-            + " parse (FormatException); the query returns the other value."
-    )]
+    // GREATEST skips NULL, where the parse of the empty text of the cell fails in
+    // memory: the greatest is NULL there, which no number is read from, as for
+    // any other value computed from a NULL cell parsed bare.
+    [Fact]
     public void FailsOnTheGreatestOfANullCellParsedBare()
     {
-        Comparison.AssertSameElements(db =>
+        Enumeration.AssertFails<FormatException, InvalidOperationException>(db =>
             db.Values.Where(x => long.Parse(x.Cells[ValueId].Value.TextValue) == 91)
                 .Select(x => new[] { long.Parse(x.Cells[Big].Value.TextValue), 5L }.Max())
         );

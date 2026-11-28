@@ -4,9 +4,6 @@ using Linq.Expressions.Translation.PostgreSql;
 using Pure.RelationalSchema.Abstractions.Column;
 using Pure.RelationalSchema.Storage.Abstractions;
 
-// The tests of semantics translation does not keep yet are skipped until it does.
-#pragma warning disable xUnit1004
-
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying.Tests;
 
 /// <summary>
@@ -394,12 +391,7 @@ public sealed record ProviderRootTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111: UnionBy of rows of two tables of one width runs and reads "
-            + "the Entries row 92 as a row of Parents: RowSetOperations checks "
-            + "Concat, Union, Intersect and Except only "
-            + "(QueryElement.IsSetOperation leaves UnionBy out)."
-    )]
+    [Fact]
     public void RefusesTheRowsOfATableUnitedByKeyWithRowsOfAnotherTable()
     {
         _ = Enumeration.AssertRefused(db =>
@@ -407,12 +399,7 @@ public sealed record ProviderRootTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111: UnionBy of rows of Parents and Children is not refused "
-            + "(QueryElement.IsSetOperation leaves UnionBy out) and fails on the "
-            + "server with PostgresException 42601: each UNION query must have the "
-            + "same number of columns."
-    )]
+    [Fact]
     public void RefusesTheRowsOfATableUnitedByKeyWithRowsOfAWiderTable()
     {
         _ = Enumeration.AssertRefused(db =>
