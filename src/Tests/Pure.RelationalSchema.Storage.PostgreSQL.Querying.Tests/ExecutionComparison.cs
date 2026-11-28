@@ -136,6 +136,66 @@ internal sealed record ExecutionComparison
         return exception;
     }
 
+    /// <summary>
+    /// The query returns elements over the enumerated rows, and fails over the
+    /// stored tables with an exception of the type, in its one statement: a value
+    /// PostgreSQL cannot hold, or a NULL no value is read from.
+    /// </summary>
+    public void AssertFails<TStored>(Func<ExecutionTables, IQueryable> query)
+        where TStored : Exception
+    {
+        Assert.NotEmpty(Elements(query(ExecutionTables.Enumerated(_fixture))));
+        AssertStoredFails<TStored>(query);
+    }
+
+    /// <summary>
+    /// The query fails over the enumerated rows and over the stored tables, each
+    /// with an exception of its type, the second in its one statement: a failure
+    /// SQL does not raise as .NET does.
+    /// </summary>
+    public void AssertFails<TEnumerated, TStored>(Func<ExecutionTables, IQueryable> query)
+        where TEnumerated : Exception
+        where TStored : Exception
+    {
+        AssertFails<TEnumerated, TStored>(query, query);
+    }
+
+    /// <summary>
+    /// The first computation fails over the stored tables and the second over the
+    /// enumerated rows, each with an exception of its type, the first in its one
+    /// statement.
+    /// </summary>
+    public void AssertFails<TEnumerated, TStored>(
+        Func<ExecutionTables, IQueryable> stored,
+        Func<ExecutionTables, IQueryable> enumerated
+    )
+        where TEnumerated : Exception
+        where TStored : Exception
+    {
+        _ = Assert.Throws<TEnumerated>(() =>
+            Elements(enumerated(ExecutionTables.Enumerated(_fixture)))
+        );
+        AssertStoredFails<TStored>(stored);
+    }
+
+    private void AssertStoredFails<TStored>(Func<ExecutionTables, IQueryable> query)
+        where TStored : Exception
+    {
+        using RecordingConnection connection = new RecordingConnection(
+            _fixture.Connection
+        );
+
+        _ = Assert.Throws<TStored>(() =>
+            Elements(query(ExecutionTables.Stored(_fixture, connection)))
+        );
+        _ = Assert.Single(connection.Statements);
+    }
+
+    private static List<object?> Elements(System.Collections.IEnumerable query)
+    {
+        return [.. query.Cast<object?>()];
+    }
+
     private void AssertSameOutcome(Func<ExecutionTables, IEnumerable<string>> query)
     {
         AssertSameOutcome(query, query);

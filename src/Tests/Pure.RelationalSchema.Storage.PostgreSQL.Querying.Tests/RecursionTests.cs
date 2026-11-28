@@ -459,22 +459,30 @@ public sealed record RecursionTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    // The level a step reads is a parameter of the step, which stands for no table
-    // the provider knows, so the count of the cells of its rows is not a constant.
+    // The level a step reads holds rows of the table of its seed, so the count of
+    // the cells of its rows is the count of the columns of that table.
     [Fact]
-    public void RefusesTheCountOfTheCellsOfTheRowsOfTheLevel()
+    public void ReadsTheCountOfTheCellsOfTheRowsOfTheLevel()
     {
-        _ = Enumeration.AssertRefused(db =>
-            MarkerCalls.WithRecursive(
-                db.Parents.Where(x => x.Cells[ParentId].Value.TextValue == "2"),
-                level =>
-                    db.Parents.Join(
-                        level.Where(x => x.Cells.Count > 5),
-                        x => x.Cells[ParentNumber].Value.TextValue,
-                        x => x.Cells[ParentId].Value.TextValue,
-                        (parent, before) => parent
+        Enumeration.AssertSameElements(
+            db =>
+                MarkerCalls
+                    .WithRecursive(
+                        db.Parents.Where(x => x.Cells[ParentId].Value.TextValue == "2"),
+                        level =>
+                            db.Parents.Join(
+                                level.Where(x => x.Cells.Count > 5),
+                                x => x.Cells[ParentNumber].Value.TextValue,
+                                x => x.Cells[ParentId].Value.TextValue,
+                                (parent, before) => parent
+                            )
                     )
-            )
+                    .Select(x => x.Cells[ParentId].Value.TextValue),
+            db =>
+                db.Parents.Where(x =>
+                        x.Cells[ParentId].Value.TextValue == "2" && x.Cells.Count <= 5
+                    )
+                    .Select(x => x.Cells[ParentId].Value.TextValue)
         );
     }
 

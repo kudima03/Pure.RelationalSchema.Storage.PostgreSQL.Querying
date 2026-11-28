@@ -29,6 +29,7 @@ internal sealed record ResultReader : IResultReader
         typeof(float),
         typeof(double),
         typeof(decimal),
+        typeof(char),
         typeof(string),
         typeof(Guid),
         typeof(DateTime),

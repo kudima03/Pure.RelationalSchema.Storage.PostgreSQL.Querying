@@ -573,14 +573,14 @@ public sealed record InMemorySequenceTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    // The translator writes no VALUES of unsigned numbers (In-memory rows of type
-    // 'UInt16' cannot be translated into SQL), so a query of them stays refused.
+    // VALUES holds an unsigned number as the narrowest PostgreSQL type that holds
+    // every value of its type.
     [Fact]
-    public void RefusesInMemoryUnsignedShorts()
+    public void JoinsAnUnsignedShortKeyToInMemoryUnsignedShorts()
     {
         ushort[] numbers = [0, 65535, 7];
 
-        Enumeration.AssertNotSupported(db =>
+        Enumeration.AssertSameElements(db =>
             db.Values.Join(
                 numbers.AsQueryable(),
                 x =>
@@ -595,11 +595,11 @@ public sealed record InMemorySequenceTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact]
-    public void RefusesInMemoryUnsignedIntegers()
+    public void JoinsAnUnsignedIntegerKeyToInMemoryUnsignedIntegers()
     {
         uint[] numbers = [0, 4294967295, 7];
 
-        Enumeration.AssertNotSupported(db =>
+        Enumeration.AssertSameElements(db =>
             db.Values.Join(
                 numbers.AsQueryable(),
                 x =>
@@ -614,11 +614,11 @@ public sealed record InMemorySequenceTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact]
-    public void RefusesInMemoryUnsignedLongs()
+    public void JoinsAnUnsignedLongKeyToInMemoryUnsignedLongs()
     {
         ulong[] numbers = [0, ulong.MaxValue, 9223372036854775808, 8];
 
-        Enumeration.AssertNotSupported(db =>
+        Enumeration.AssertSameElements(db =>
             db.Values.Join(
                 numbers.AsQueryable(),
                 x =>

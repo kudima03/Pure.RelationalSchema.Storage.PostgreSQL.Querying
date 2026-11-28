@@ -2,9 +2,6 @@ using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using Pure.RelationalSchema.Abstractions.Column;
 
-// The tests of semantics the translation does not keep yet are skipped until it does.
-#pragma warning disable xUnit1004
-
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying.Tests;
 
 /// <summary>
@@ -360,10 +357,7 @@ public sealed record InMemoryMembershipTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #138): Enumerable.All over a captured array is refused "
-            + "(The method 'Enumerable.All' is not supported); its Queryable form is not."
-    )]
+    [Fact]
     public void FiltersByAllOfAnArrayDifferingFromTheRow()
     {
         long[] ids = [1, 4, 91, 500];
@@ -376,15 +370,13 @@ public sealed record InMemoryMembershipTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #138): Enumerable.All over a captured array is refused "
-            + "(The method 'Enumerable.All' is not supported); its Queryable form is not."
-    )]
-    public void FiltersByAllOfAnEmptyArray()
+    // VALUES has at least one row, so the translator writes no empty sequence.
+    [Fact]
+    public void RefusesAllOfAnEmptyArray()
     {
         long[] none = [];
 
-        Enumeration.AssertSameElements(db =>
+        Enumeration.AssertNotSupported(db =>
             db.Values.Where(x =>
                     none.All(y => y == long.Parse(x.Cells[ValueId].Value.TextValue))
                 )
@@ -414,11 +406,7 @@ public sealed record InMemoryMembershipTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #138): Enumerable.Count over a captured array is refused "
-            + "(The method 'Enumerable.Count' is not supported); its Queryable form is "
-            + "not."
-    )]
+    [Fact]
     public void FiltersByTheCountOfAnArrayBelowTheRow()
     {
         long[] ids = [1, 4, 91, 500];
@@ -431,11 +419,7 @@ public sealed record InMemoryMembershipTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #138): Enumerable.Where over a captured array is refused "
-            + "(The method 'Enumerable.Where' is not supported); its Queryable form is "
-            + "not."
-    )]
+    [Fact]
     public void ProjectsTheSumOfAnArrayBelowTheRowWhichMayBeEmpty()
     {
         long[] ids = [1, 4, 91, 500];
@@ -448,11 +432,7 @@ public sealed record InMemoryMembershipTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #138): Enumerable.Where over a captured array is refused "
-            + "(The method 'Enumerable.Where' is not supported); its Queryable form is "
-            + "not."
-    )]
+    [Fact]
     public void ProjectsTheNullableMaximumOfAnArrayBelowTheRow()
     {
         long[] ids = [1, 4, 91, 500];
@@ -466,11 +446,7 @@ public sealed record InMemoryMembershipTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #138): Enumerable.Where over a captured array is refused "
-            + "(The method 'Enumerable.Where' is not supported); its Queryable form is "
-            + "not."
-    )]
+    [Fact]
     public void ThrowsForTheMinimumOfAnEmptyPartOfAnArray()
     {
         long[] ids = [1, 4, 91, 500];
@@ -499,11 +475,7 @@ public sealed record InMemoryMembershipTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #138): Enumerable.Where over a captured array is refused "
-            + "(The method 'Enumerable.Where' is not supported); its Queryable form is "
-            + "not."
-    )]
+    [Fact]
     public void ProjectsTheAverageOfInMemoryDoublesUpToTheRow()
     {
         double[] numbers = [0.1, 0.2, 0.3, 1.0 / 3, 7.5];
@@ -686,11 +658,7 @@ public sealed record InMemoryMembershipTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #139): Contains of a tuple in an in-memory sequence of "
-            + "tuples is refused (Entities and projections cannot be used where a single "
-            + "value is required)."
-    )]
+    [Fact]
     public void FiltersByMembershipOfATupleInAnArrayOfTuples()
     {
         (long, string)[] pairs = [(1, "plain"), (2, ""), (3, "plain")];
@@ -708,11 +676,7 @@ public sealed record InMemoryMembershipTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #139): Contains of a tuple in an in-memory sequence of "
-            + "tuples is refused (Entities and projections cannot be used where a single "
-            + "value is required)."
-    )]
+    [Fact]
     public void FiltersByMembershipOfATupleInAnInMemoryQueryOfTuples()
     {
         (long, string)[] pairs = [(1, "plain"), (2, ""), (3, "plain")];
@@ -763,11 +727,7 @@ public sealed record InMemoryMembershipTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #138): Enumerable.Contains over ToList() of a stored "
-            + "subquery is refused (The method 'Queryable.Select' is not supported), "
-            + "though it is the IN of that subquery."
-    )]
+    [Fact]
     public void FiltersByMembershipInAMaterializedListOfAStoredQuery()
     {
         Enumeration.AssertSameElements(db =>
@@ -781,12 +741,7 @@ public sealed record InMemoryMembershipTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111: a stored query captured as IEnumerable<long> is not inlined "
-            + "by CapturedQueries (only queries and IEnumerable<IRow> are), so the "
-            + "translator meets its raw cells (The property 'IRow.Cells' cannot be "
-            + "mapped)."
-    )]
+    [Fact]
     public void FiltersByMembershipInAStoredQueryCapturedAsASequence()
     {
         Enumeration.AssertSameElements(db =>

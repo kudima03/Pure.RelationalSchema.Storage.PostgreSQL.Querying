@@ -3,7 +3,6 @@ using System.Linq.Expressions;
 using System.Reflection;
 using Pure.Primitives.Abstractions.String;
 using Pure.RelationalSchema.Abstractions.Column;
-using Pure.RelationalSchema.Abstractions.Table;
 using Pure.RelationalSchema.Storage.Abstractions;
 
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying;
@@ -64,14 +63,20 @@ internal sealed class EntityExpression : ExpressionVisitor
 
     protected override Expression VisitMethodCall(MethodCallExpression node)
     {
-        if (node.Method.DeclaringType == typeof(Queryable) || QueryElement.IsMarker(node))
+        if (QueryElement.IsOperator(node))
         {
             IReadOnlyDictionary<ParameterExpression, Expression> bindings =
-                QueryElement.Bindings(node);
+                QueryElement.Bindings(
+                    (MethodCallExpression)new Substitution(_bindings).Visit(node)
+                );
             foreach (KeyValuePair<ParameterExpression, Expression> binding in bindings)
             {
                 _bindings[binding.Key] = binding.Value;
             }
+        }
+        if (Extreme(node) is Expression extreme)
+        {
+            return extreme;
         }
         if (Parsed(node) is MethodCallExpression parsed)
         {
@@ -98,6 +103,62 @@ internal sealed class EntityExpression : ExpressionVisitor
             }
         }
         return base.VisitMethodCall(node);
+    }
+
+    /// <summary>
+    /// The least or the greatest of the values an array lists (<c>new[] { ...
+    /// }.Max()</c>), which SQL takes skipping NULL: where a cell parsed bare among
+    /// them is NULL the result is NULL, as that of any other expression over the
+    /// value of the cell, not the extreme of the other values.
+    /// </summary>
+    private Expression? Extreme(MethodCallExpression node)
+    {
+        if (
+            node.Method.Name is not (nameof(Enumerable.Max) or nameof(Enumerable.Min))
+            || node.Arguments.Count != 1
+            || Listed(node.Arguments[0]) is not NewArrayExpression list
+        )
+        {
+            return null;
+        }
+        Expression[] cells =
+        [
+            .. list
+                .Expressions.OfType<MethodCallExpression>()
+                .Select(x =>
+                    Parsed(x) is MethodCallExpression cell
+                    && Typed(cell, x.Type, false) is not null
+                        ? Typed(cell, x.Type, true)
+                        : null
+                )
+                .OfType<Expression>(),
+        ];
+        return cells.Length == 0
+            ? null
+            : Expression.Convert(
+                Expression.Condition(
+                    cells
+                        .Select(Expression (x) =>
+                            Expression.Equal(x, Expression.Constant(null, x.Type))
+                        )
+                        .Aggregate(Expression.OrElse),
+                    Expression.Constant(null, cells[0].Type),
+                    Expression.Convert(base.VisitMethodCall(node), cells[0].Type)
+                ),
+                node.Type
+            );
+    }
+
+    /// <summary>
+    /// The array an extreme is taken of, read as it is or, as the compiler prefers
+    /// since C# 14, as a span the array converts to.
+    /// </summary>
+    private static Expression Listed(Expression values)
+    {
+        return values is MethodCallExpression { Arguments: [Expression array] } conversion
+            && conversion.Method.Name == "op_Implicit"
+            ? array
+            : values;
     }
 
     /// <summary>
@@ -334,17 +395,32 @@ internal sealed class EntityExpression : ExpressionVisitor
     /// <summary>
     /// The count or keys of the cells of a row, which are the columns of its table.
     /// </summary>
-    private ConstantExpression Columns(MemberExpression node, Expression row)
+    private Expression Columns(MemberExpression node, Expression row)
     {
-        ITable table =
-            QueryElement.TableOf(new Substitution(_bindings).Visit(row))
+        ElementRow element =
+            QueryElement.RowOf(new Substitution(_bindings).Visit(row))
             ?? throw new NotSupportedException();
-        IColumn[] columns = [.. table.Columns];
-        return Expression.Constant(
-            node.Member.Name == nameof(IReadOnlyDictionary<,>.Keys)
-                ? columns
-                : columns.Length,
-            node.Type
+        IColumn[] columns = [.. element.Table.Columns];
+        return node.Member.Name == nameof(IReadOnlyDictionary<,>.Keys)
+                ? Expression.Constant(columns, node.Type)
+            : element.IsOptional ? Counted(Visit(row), columns.Length)
+            : Expression.Constant(columns.Length, node.Type);
+    }
+
+    /// <summary>
+    /// The count of the cells of a row that may be missing, the row of a
+    /// <c>DefaultIfEmpty</c>: NULL where it is, which no number reads, as no cells
+    /// are counted in memory there.
+    /// </summary>
+    private static UnaryExpression Counted(Expression row, int count)
+    {
+        return Expression.Convert(
+            Expression.Condition(
+                Expression.Equal(row, Expression.Constant(null, row.Type)),
+                Expression.Constant(null, typeof(int?)),
+                Expression.Constant(count, typeof(int?))
+            ),
+            typeof(int)
         );
     }
 }

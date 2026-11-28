@@ -3,9 +3,6 @@ using Linq.Expressions.Translation.PostgreSql;
 using Pure.RelationalSchema.Abstractions.Column;
 using Pure.RelationalSchema.Storage.Abstractions;
 
-// The tests of semantics translation does not keep yet are skipped until it does.
-#pragma warning disable xUnit1004
-
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying.Tests;
 
 /// <summary>
@@ -239,11 +236,7 @@ public sealed record MarkerShapeTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #141): the translator refuses DefaultIfEmpty() as a sequence "
-            + "operator, with or without a marker (The method "
-            + "'Queryable.DefaultIfEmpty' is not supported)."
-    )]
+    [Fact]
     public void ReadsTheDefaultRowOfAnEmptyWindowOfRows()
     {
         Enumeration.AssertSameElements(
@@ -265,11 +258,7 @@ public sealed record MarkerShapeTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #141): the translator refuses DefaultIfEmpty() as a sequence "
-            + "operator, with or without a marker (The method "
-            + "'Queryable.DefaultIfEmpty' is not supported)."
-    )]
+    [Fact]
     public void ReadsTheDefaultValueOfAnEmptyWindowOfValues()
     {
         Enumeration.AssertSameElements(
@@ -403,13 +392,7 @@ public sealed record MarkerShapeTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111: row.Cells.Count in an Enumerable operator over the group of "
-            + "a GroupJoin is refused (Specified method is not supported, from "
-            + "EntityExpression.Columns): EntityExpression binds the lambdas of "
-            + "Queryable operators and markers only; a plain GroupJoin fails the "
-            + "same way."
-    )]
+    [Fact]
     public void SumsTheCountOfTheCellsOfTheRowsOfAGroupJoinedWindow()
     {
         Enumeration.AssertSameElements(
@@ -508,11 +491,7 @@ public sealed record MarkerShapeTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #141): the translator refuses ElementAt(Index) counted from the "
-            + "end, with or without a marker (The method 'Queryable.ElementAt' is "
-            + "not supported)."
-    )]
+    [Fact]
     public void ReadsTheLastResultOfAnOrderedWindowByAnIndexFromTheEnd()
     {
         Enumeration.AssertSameValue(
@@ -1033,15 +1012,12 @@ public sealed record MarkerShapeTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111: Cells.Count of the missing row of a left join is the "
-            + "constant 4 (SELECT 4 ... LEFT JOIN ...) where LINQ to Objects throws "
-            + "NullReferenceException: EntityExpression.Columns ignores "
-            + "ElementRow.IsOptional."
-    )]
-    public void ThrowsForTheCountOfTheCellsOfAMissingRowOfAWindow()
+    // The cells of a missing row are counted nowhere: in memory the row is null,
+    // and in SQL the count is NULL, which no number is read from.
+    [Fact]
+    public void FailsOnTheCountOfTheCellsOfAMissingRowOfAWindow()
     {
-        Enumeration.AssertSameElements(
+        Enumeration.AssertFails<NullReferenceException, InvalidOperationException>(
             db =>
                 MarkerCalls.Over(
                     db.Parents.GroupJoin(
@@ -1194,12 +1170,7 @@ public sealed record MarkerShapeTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111: a stored query other than a table held by a "
-            + "ConstantExpression is not inlined (CapturedQueries.IsCapture leaves "
-            + "constants out), so TranslatedQuery refuses it as a source other than "
-            + "stored tables."
-    )]
+    [Fact]
     public void JoinsRowsToAStoredQueryHeldByAConstant()
     {
         Enumeration.AssertSameElements(db =>

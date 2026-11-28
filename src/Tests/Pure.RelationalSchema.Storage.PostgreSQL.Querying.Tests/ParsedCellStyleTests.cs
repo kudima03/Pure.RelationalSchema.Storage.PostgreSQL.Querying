@@ -249,15 +249,26 @@ public sealed record ParsedCellStyleTests : IClassFixture<ExecutionFixture>
     }
 
     [Fact]
-    public void ReadsUnsignedNumbersAndBytes()
+    public void ReadsANumberConvertedToAnUnsignedLong()
     {
         Enumeration.AssertSameElements(db =>
-            db.Parents.Select(x => new ValueTuple<uint, ulong, ushort, byte>(
-                (uint)x.Cells[ParentKey].Value.TextValue.Length,
-                (ulong)x.Cells[ParentKey].Value.TextValue.Length,
-                (ushort)x.Cells[ParentKey].Value.TextValue.Length,
-                (byte)x.Cells[ParentKey].Value.TextValue.Length
-            ))
+            db.Parents.Select(x => (ulong)x.Cells[ParentKey].Value.TextValue.Length)
+        );
+    }
+
+    // A conversion to a byte or to a narrower unsigned number wraps in C#, which a
+    // cast to the wider PostgreSQL type that holds it does not.
+    [Fact]
+    public void RefusesANumberConvertedToAnUnsignedIntegerShortOrByte()
+    {
+        Enumeration.AssertNotSupported(db =>
+            db.Parents.Select(x => (uint)x.Cells[ParentKey].Value.TextValue.Length)
+        );
+        Enumeration.AssertNotSupported(db =>
+            db.Parents.Select(x => (ushort)x.Cells[ParentKey].Value.TextValue.Length)
+        );
+        Enumeration.AssertNotSupported(db =>
+            db.Parents.Select(x => (byte)x.Cells[ParentKey].Value.TextValue.Length)
         );
     }
 

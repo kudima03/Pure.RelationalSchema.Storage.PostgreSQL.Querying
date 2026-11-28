@@ -2,9 +2,6 @@ using System.Globalization;
 using Pure.RelationalSchema.Abstractions.Column;
 using Xunit.Abstractions;
 
-// The tests of semantics the translation does not keep yet are skipped until it does.
-#pragma warning disable xUnit1004
-
 namespace Pure.RelationalSchema.Storage.PostgreSQL.Querying.Tests;
 
 /// <summary>
@@ -80,15 +77,14 @@ public sealed record OrderedGroupValueTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #134): First of a group sorted by keys that tie takes any of the tied"
-            + " elements (ARRAY_AGG(... ORDER BY key) does not sort stably), where .NET"
-            + " takes the first in the order of the source."
-    )]
+    // The elements whose keys tie keep the order of the source, which a stored
+    // table has only when it is sorted.
+    [Fact]
     public void ReadsTheFirstValueOfGroupsWhoseKeysTie()
     {
         Comparison.AssertSameElements(db =>
-            db.Values.GroupBy(x => x.Cells[Flag].Value.TextValue)
+            db.Values.OrderBy(x => long.Parse(x.Cells[ValueId].Value.TextValue))
+                .GroupBy(x => x.Cells[Flag].Value.TextValue)
                 .Select(x => new ValueTuple<string, string, string>(
                     x.Key,
                     x.OrderBy(row => row.Cells[Small].Value.TextValue.Length)
@@ -101,16 +97,12 @@ public sealed record OrderedGroupValueTests : IClassFixture<ExecutionFixture>
         );
     }
 
-    [Fact(
-        Skip = "#111 (translator #134): Last of a group sorted by keys that tie is the first element of"
-            + " ARRAY_AGG in the inverted order, any of the tied elements (even a stable"
-            + " sort would give the first of them), where .NET takes the last in the order"
-            + " of the source."
-    )]
+    [Fact]
     public void ReadsTheLastValueOfGroupsWhoseKeysTie()
     {
         Comparison.AssertSameElements(db =>
-            db.Values.GroupBy(x => x.Cells[Flag].Value.TextValue)
+            db.Values.OrderBy(x => long.Parse(x.Cells[ValueId].Value.TextValue))
+                .GroupBy(x => x.Cells[Flag].Value.TextValue)
                 .Select(x => new ValueTuple<string, string, string>(
                     x.Key,
                     x.OrderByDescending(row => row.Cells[Small].Value.TextValue.Length)
